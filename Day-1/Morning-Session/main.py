@@ -2,6 +2,17 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv() # Load environment variables
+hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+
+if hf_token:
+    print(f"HUGGINGFACEHUB_API_TOKEN successfully loaded. Length: {len(hf_token)}")
+    # For security, do NOT print the actual token value in production logs!
+    # print(f"Token starts with: {hf_token[:5]} and ends with: {hf_token[-5:]}")
+else:
+    print("HUGGINGFACEHUB_API_TOKEN NOT found!")
+
+# Exit early to avoid the LLM call for this test
+exit()
 
 # Import your custom tools
 from tools import get_weather, calculator
