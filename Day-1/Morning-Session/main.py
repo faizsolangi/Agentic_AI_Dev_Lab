@@ -23,7 +23,7 @@ from langchain_core.prompts import PromptTemplate
 
 try:
     llm = HuggingFaceEndpoint(
-        repo_id="google/flan-t5-tiny", # Or another valid text-generation model
+        repo_id="google/flan-t5-small", # Or another valid text-generation model
         temperature=0.1,
         max_new_tokens=512, # Use max_new_tokens
         # HUGGINGFACEHUB_API_TOKEN is picked up from env vars
