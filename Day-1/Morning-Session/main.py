@@ -6,13 +6,13 @@ load_dotenv() # Load environment variables
 # Import your custom tools
 from tools import get_weather, calculator
 
-# Import HuggingFaceHub
+# Import HuggingFaceEndpoint
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain import hub
 from langchain_core.prompts import PromptTemplate
 
-# 1. Initialize your LLM using HuggingFaceHub
+# 1. Initialize your LLM using HuggingFaceEndpoint
 # Choose a model from the Hugging Face Hub.
 # Be aware that free models on the Hub might have rate limits or be slower.
 # Example: Google's Flan-T5-xxl, or other smaller, faster models.
@@ -21,7 +21,7 @@ from langchain_core.prompts import PromptTemplate
 # For a simple text generation LLM that works well with ReAct, start with a text-to-text model like Flan-T5.
 
 try:
-    llm = HuggingFaceHub(
+    llm = HuggingFaceEndpoint(
         repo_id="mistralai/Mistral-7B-Instruct-v0.2", # A good starting point, balance of size/performance for testing
         model_kwargs={"temperature": 0.1, "max_length": 512}, # Adjust as needed
         # You don't explicitly pass the API token here; it's picked up from HUGGINGFACEHUB_API_TOKEN env var
