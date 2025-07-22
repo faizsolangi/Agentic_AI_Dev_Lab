@@ -20,17 +20,22 @@ from langchain_core.prompts import PromptTemplate
 # Note: zephyr-7b-beta is a chat model, may require a specific prompt template or chat model setup.
 # For a simple text generation LLM that works well with ReAct, start with a text-to-text model like Flan-T5.
 
+
 try:
     llm = HuggingFaceEndpoint(
-        repo_id="mistralai/Mistral-7B-Instruct-v0.2", # A good starting point, balance of size/performance for testing
-        model_kwargs={"temperature": 0.1, "max_length": 512}, # Adjust as needed
-        # You don't explicitly pass the API token here; it's picked up from HUGGINGFACEHUB_API_TOKEN env var
+        repo_id="mistralai/Mistral-7B-Instruct-v0.2", # Or another valid text-generation model
+        temperature=0.1,
+        max_new_tokens=512, # Use max_new_tokens
+        # HUGGINGFACEHUB_API_TOKEN is picked up from env vars
     )
+    print("HuggingFaceEndpoint LLM initialized successfully.")
 except Exception as e:
-    print(f"Error initializing HuggingFaceHub LLM: {e}")
-    print("Please ensure you have set HUGGINGFACEHUB_API_TOKEN in your .env file and chosen a valid repo_id.")
-    # Fallback to OpenAI or exit, depending on your preference
-    llm = None # Or sys.exit(1)
+    print(f"Error initializing HuggingFaceEndpoint LLM: {e}")
+    print("Please ensure HUGGINGFACEHUB_API_TOKEN is set in Render's environment variables and the repo_id is correct and suitable for text generation.")
+    llm = None
+
+
+
 
 if llm:
     # 2. Define your tools
