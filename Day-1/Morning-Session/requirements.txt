@@ -1,3 +1,4 @@
 langchain 
 langchain-community 
-openai
+huggingface_hub
+HuggingFaceHub LLM

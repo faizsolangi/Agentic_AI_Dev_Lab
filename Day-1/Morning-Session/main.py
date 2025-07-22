@@ -22,7 +22,7 @@ from langchain_core.prompts import PromptTemplate
 
 try:
     llm = HuggingFaceHub(
-        repo_id="google/flan-t5-large", # A good starting point, balance of size/performance for testing
+        repo_id="Voxtral-Small-24B-2507", # A good starting point, balance of size/performance for testing
         model_kwargs={"temperature": 0.1, "max_length": 512}, # Adjust as needed
         # You don't explicitly pass the API token here; it's picked up from HUGGINGFACEHUB_API_TOKEN env var
     )
