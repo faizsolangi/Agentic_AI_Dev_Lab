@@ -1,5 +1,4 @@
 import os
-
 from langchain_tavily import TavilySearch
 
 tool = TavilySearch(
@@ -9,19 +8,21 @@ tool = TavilySearch(
 
 try:
     print("Invoking Tavily tool for Wimbledon query...")
-    wimbledon_result = tool.invoke({"query": "What happened at the last wimbledon"})
+    wimbledon_result_dict = tool.invoke({"query": "What happened at the last wimbledon"})
     
-    # --- DEBUGGING LINES ---
-    print(f"Type of wimbledon_result: {type(wimbledon_result)}")
-    print(f"Content of wimbledon_result (raw): {wimbledon_result}")
-    # -----------------------
+    print(f"Type of wimbledon_result: {type(wimbledon_result_dict)}")
+    print(f"Content of wimbledon_result (raw): {wimbledon_result_dict}")
 
-    # Only try to access .content if it's an object with that attribute
-    if hasattr(wimbledon_result, 'content'):
-        print("Wimbledon Search Result (first 400 chars):", wimbledon_result.content[:400])
+    # --- FIX IS HERE: Accessing content from the dictionary structure ---
+    if 'results' in wimbledon_result_dict and wimbledon_result_dict['results']:
+        print("\nWimbledon Search Results:")
+        for i, res in enumerate(wimbledon_result_dict['results']):
+            print(f"  Result {i+1} (Title: {res.get('title', 'N/A')}):")
+            print(f"    Content: {res.get('content', 'No content available')[:200]}...") # Print first 200 chars
+            print(f"    URL: {res.get('url', 'N/A')}")
     else:
-        # If it's a dictionary, access it differently
-        print("Wimbledon Search Result (as dict, full):", wimbledon_result)
+        print("No results found for Wimbledon query.")
+    # ------------------------------------------------------------------
 
 
     print("\nInvoking Tavily tool for Euro 2024 query...")
@@ -33,19 +34,23 @@ try:
     }
     
     euro_query_args = model_generated_tool_call["args"]
-    euro_result = tool.invoke(euro_query_args)
+    euro_result_dict = tool.invoke(euro_query_args)
     
-    # --- DEBUGGING LINES ---
-    print(f"Type of euro_result: {type(euro_result)}")
-    print(f"Content of euro_result (raw): {euro_result}")
-    # -----------------------
+    print(f"Type of euro_result: {type(euro_result_dict)}")
+    print(f"Content of euro_result (raw): {euro_result_dict}")
 
-    if hasattr(euro_result, 'content'):
-        print("Euro 2024 Search Result (first 400 chars):", euro_result.content[:400])
+    # --- FIX IS HERE: Accessing content from the dictionary structure ---
+    if 'results' in euro_result_dict and euro_result_dict['results']:
+        print("\nEuro 2024 Search Results:")
+        for i, res in enumerate(euro_result_dict['results']):
+            print(f"  Result {i+1} (Title: {res.get('title', 'N/A')}):")
+            print(f"    Content: {res.get('content', 'No content available')[:200]}...") # Print first 200 chars
+            print(f"    URL: {res.get('url', 'N/A')}")
     else:
-        print("Euro 2024 Search Result (as dict, full):", euro_result)
+        print("No results found for Euro 2024 query.")
+    # ------------------------------------------------------------------
 
 
 except Exception as e:
-    print(f"Error calling TavilySearch tool: {e}")
-    print("Please ensure TAVILY_API_KEY is correctly set in Render's environment variables.")
+    print(f"An unexpected error occurred: {e}")
+    print("Please ensure TAVILY_API_KEY is correctly set in Render's environment variables and the network is stable.")
