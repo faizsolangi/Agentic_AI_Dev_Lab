@@ -1,4 +1,3 @@
 langchain 
 langchain-community 
-huggingface_hub
-HuggingFaceHub
+huggingface-hub
