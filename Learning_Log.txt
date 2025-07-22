@@ -1,0 +1,67 @@
+# Agentic AI Dev Lab - Learning Log
+## Week 1: Foundational Agents & Frameworks
+### Day 1: [Date of Session-- July 22, 2025] - LangChain Agents & Advanced Tooling
+
+Morning Session (Time Spent: X hours)
+Topics Covered: Briefly list the main topics (LangChain agent types, custom tools).
+
+Tools: The tool abstraction in LangChain associates a Python function with a schema that defines the function's name, description and expected arguments.
+
+Toolkit: LangChain has a concept of toolkits. This a very thin abstraction that groups tools together that are designed to be used together for specific tasks.
+
+Agents: The reasoning engine that decides which tools to use and when.
+
+AgentExecutors: The runtime that drives the agent's actions based on the LLM's decisions. Agent that is using tools.
+
+create_react_agent: LangGraph's prebuilt create_react_agent does not take a prompt template directly as a parameter, but instead takes a prompt parameter. This modifies the graph state before the llm is called, and can be one of four values:
+A SystemMessage, which is added to the beginning of the list of messages.
+A string, which is converted to a SystemMessage and added to the beginning of the list of messages.
+A Callable, which should take in full graph state. The output is then passed to the language model.
+Or a Runnable, which should take in full graph state. The output is then passed to the language model.
+
+
+create_openai_tools_agent: Create an agent that uses OpenAI tools.
+langchain.agents.openai_tools.base.create_openai_tools_agent(
+llm: BaseLanguageModel,
+tools: Sequence[BaseTool],
+prompt: ChatPromptTemplate,
+strict: bool | None = None,
+) → Runnable[source]
+
+
+
+
+Key Learnings/Concepts Mastered:
+    * [Bullet point 1: e.g., How to define an `LLMMathTool` and integrate it.]
+    * [Bullet point 2: e.g., Understanding the `AgentExecutor` loop.]
+Code Examples/Experiments:
+    * [Link to specific file/folder in repo: e.g., `day_1/basic_weather_agent.py`]
+    * [Brief description of experiment/result: e.g., Successfully built an agent using a custom weather tool.]
+
+Afternoon Session (Time Spent: Y hours)
+Topics Covered: (e.g., LangChain Memory, LCEL for chaining).
+Key Learnings/Concepts Mastered:
+    * [Bullet point 1: e.g., Difference between `ConversationBufferMemory` and `SummaryMemory`.]
+    * [Bullet point 2: e.g., Basic syntax for chaining components with LCEL.]
+Code Examples/Experiments:
+    * [Link: `day_1/agent_with_memory.py`]
+    * [Brief description: Agent now remembers conversation history.]
+
+Evening Session (Time Spent: Z hours)
+Topics Covered: (e.g., ReAct pattern, prompt engineering for agents).
+Key Learnings/Concepts Mastered:
+    * [Bullet point 1: e.g., Breaking down agent reasoning into Thought-Action-Observation.]
+    * [Bullet point 2: e.g., How system prompts influence tool selection.]
+
+Challenges Encountered & Solutions:
+    * [Challenge 1: e.g., Agent wasn't reliably using my custom tool.]
+    * [Solution 1: e.g., Refined prompt to explicitly instruct agent on tool usage.]
+
+Day 1 in Review:
+
+Next Steps/Goals for Day 2: (e.g., Start with LangGraph's StateGraph concepts.)
+
+
+------------------------------------------------------------------------------------------------------------------------
+### Day 2: [Date of Session-- July 23, 2025] - 
+
