@@ -7,7 +7,8 @@ load_dotenv() # Load environment variables
 from tools import get_weather, calculator
 
 # Import HuggingFaceHub
-from langchain_community.llms import HuggingFaceHub
+from langchain_huggingface import HuggingFace
+from langchain_huggingface import HuggingFaceEndpoint
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain import hub
 from langchain_core.prompts import PromptTemplate

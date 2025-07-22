@@ -2,3 +2,5 @@ langchain
 langchain-community 
 huggingface-hub
 requests
+langchain-huggingface 
+python-dotenv
