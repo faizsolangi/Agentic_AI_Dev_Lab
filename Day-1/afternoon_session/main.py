@@ -1,6 +1,10 @@
 import os
+
+# Your Tavily API key should be set in Render's environment variables
+# as TAVILY_API_KEY. No code changes needed here if it's set correctly.
+
 from langchain_tavily import TavilySearch
-# The TavilySearch tool will now automatically pick up TAVILY_API_KEY from environment variables
+
 tool = TavilySearch(
     max_results=5,
     topic="general",
@@ -27,7 +31,12 @@ try:
         "name": "tavily",
         "type": "tool_call",
     }
-    euro_result = tool.invoke(model_generated_tool_call)
+    
+    # --- FIX IS HERE: Extract the 'query' from 'args' ---
+    euro_query_args = model_generated_tool_call["args"]
+    euro_result = tool.invoke(euro_query_args) # Pass just the arguments dict
+    # ---------------------------------------------------
+    
     print("Euro 2024 Search Result (first 400 chars):", euro_result.content[:400])
 
 except Exception as e:
