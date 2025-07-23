@@ -13,14 +13,7 @@ from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 # --- 1. Define your knowledge base ---
 # Let's use a short, simple text about Python programming.
 raw_text = """
-Python is a high-level, interpreted programming language. It was first released in 1991 by Guido van Rossum.
-Python is known for its readability and simplicity, making it a popular choice for beginners.
-It is widely used for web development (Django, Flask), data analysis (Pandas, NumPy), artificial intelligence,
-machine learning, automation, and scientific computing.
-Python's philosophy emphasizes code readability with its notable use of significant whitespace.
-The Python Package Index (PyPI) hosts thousands of third-party modules for Python.
-One of its key features is its large and comprehensive standard library.
-"""
+Python is a high-level, interpreted programming language. It was first released in 1991 by Guido van Rossum."""
 
 # --- 2. Load the document (in this simple case, we just treat the string as a document) ---
 # For more complex scenarios, you'd use TextLoader('your_file.txt') or PyPDFLoader, etc.
