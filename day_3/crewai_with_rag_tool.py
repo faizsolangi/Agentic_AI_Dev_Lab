@@ -126,6 +126,7 @@ write_task = Task(
     expected_output="A well-structured 300-word article on current AI trends and Python's role in AI.",
     agent=writer,
     context=[research_task]
+    human_input=True # <--- ADD THIS LINE
 )
 
 # --- 8. Form the Crew ---
