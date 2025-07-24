@@ -24,7 +24,7 @@ if not HUGGINGFACEHUB_API_TOKEN:
 # Using a general text generation model from Hugging Face Hub's Inference API
 # Add the 'task' parameter to resolve the ValidationError
 llm = HuggingFaceHub(
-    repo_id="google/flan-t5-large", # A good general-purpose model for RAG QA
+    repo_id="Qwen/Qwen2.5-72B-Instruct", # A good general-purpose model for RAG QA
     model_kwargs={"temperature": 0.5, "max_length": 512},
     huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
     task="text2text-generation" # <--- ADDED THIS LINE
@@ -42,12 +42,7 @@ embeddings_model = HuggingFaceInferenceAPIEmbeddings(
 raw_text = """
 Python is a high-level, interpreted programming language.
 It was first released in 1991 by Guido van Rossum.
-Python is known for its simplicity and readability, often using indentation to define code blocks.
-It supports multiple programming paradigms, including object-oriented, imperative, and functional programming.
-Python has a vast standard library and a large, active community that contributes to its extensive ecosystem of third-party libraries.
-It is widely used for web development (Django, Flask), data analysis (Pandas, NumPy), artificial intelligence (TensorFlow, PyTorch), scientific computing, and automation.
-The Zen of Python is a collection of 19 "guiding principles" for writing computer programs that influence the design of Python.
-"""
+Python is known for its simplicity and readability, often using indentation to define code blocks."""
 
 # --- 5. Text Splitting ---
 text_splitter = CharacterTextSplitter(
