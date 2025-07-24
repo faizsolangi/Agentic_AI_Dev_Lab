@@ -3,3 +3,4 @@ langchain-community
 faiss-cpu
 openai                 # OpenAI Python client
 langchain-openai       # LangChain's integration for OpenAI
+streamlit
