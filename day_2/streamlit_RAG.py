@@ -39,7 +39,7 @@ llm, embeddings_model = initialize_models()
 # ADD A LEADING UNDERSCORE TO THE UNHASHABLE ARGUMENT
 def create_vector_store(text_content, _embeddings_model_obj): # <--- MODIFIED LINE
     st.write("Creating FAISS vector store...")
-    text_splitter = CharacterTextSplatter(
+    text_splitter = CharacterTextSplitter(
         separator="\n",
         chunk_size=1000,
         chunk_overlap=200,
