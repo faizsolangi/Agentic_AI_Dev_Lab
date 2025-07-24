@@ -7,7 +7,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain_core.documents import Document # NEW IMPORT: To explicitly create Document objects if needed
+from langchain_core.documents import Document
 
 # --- 1. Environment Setup ---
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -67,16 +67,16 @@ def load_and_split_documents(text_content=None, url=None):
 
     return all_documents
 
-
 # --- 4. Create Vector Store (Refactored to accept documents directly) ---
 @st.cache_resource(hash_funcs={OpenAIEmbeddings: lambda _: None})
-def create_vector_store_from_documents(_embeddings_model_obj, documents):
-    if not documents:
+# MODIFIED LINE: Add underscore to 'documents'
+def create_vector_store_from_documents(_embeddings_model_obj, _documents):
+    if not _documents: # Use the underscored name here
         st.warning("No documents to create vector store from.")
         return None
     st.write("Creating FAISS vector store...")
-    # This line now expects all elements in 'documents' to be LangChain Document objects
-    vector_store = FAISS.from_documents(documents, _embeddings_model_obj)
+    # Use the underscored name here
+    vector_store = FAISS.from_documents(_documents, _embeddings_model_obj)
     st.write("FAISS vector store created successfully.")
     return vector_store
 
@@ -115,7 +115,10 @@ if st.button("Load/Re-index Knowledge Base"):
 # Initialize vector store on first run or if not yet in session_state
 if 'vector_store' not in st.session_state or st.session_state['vector_store'] is None:
     st.session_state['current_documents'] = load_and_split_documents(text_content=default_raw_text)
+    # The call to the function remains the same, as the underscore only affects the *definition* of the cached function's arguments.
     st.session_state['vector_store'] = create_vector_store_from_documents(embeddings_model, st.session_state['current_documents'])
+
+
 
 
 st.subheader("Chat with the RAG System")
