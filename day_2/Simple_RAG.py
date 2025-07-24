@@ -13,6 +13,7 @@ from langchain_community.llms import HuggingFaceHub # For LLM generation via Inf
 # IMPORTANT: Store this securely in Render's environment variables (e.g., HUGGINGFACEHUB_API_TOKEN)
 # DO NOT hardcode your API key directly in the script for production!
 HUGGINGFACEHUB_API_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+print(HUGGINGFACEHUB_API_TOKEN)
 
 if not HUGGINGFACEHUB_API_TOKEN:
     raise ValueError(

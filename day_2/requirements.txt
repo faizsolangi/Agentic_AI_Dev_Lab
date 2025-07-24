@@ -1,4 +1,4 @@
 langchain
 langchain-community
-huggingface_hub
+huggingface-hub
 faiss-cpu # or faiss-gpu if you somehow got a GPU instance
