@@ -12,10 +12,14 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 if not OPENAI_API_KEY:
     st.error("OPENAI_API_KEY environment variable not set. Please set it in Render.")
-    st.stop() # Stop the app if key is missing
+    st.stop()
 
 # --- 2. Initialize LLM and Embeddings (using st.cache_resource for efficiency) ---
-@st.cache_resource # Cache the LLM and embeddings model to avoid re-initializing on every rerun
+# Note: These should ideally be initialized only once, outside of functions if possible,
+# or passed as args not intended for hashing.
+# For simplicity, we'll keep them cached, but be aware that if the model itself changes,
+# the cache won't clear based on the model object.
+@st.cache_resource
 def initialize_models():
     llm = ChatOpenAI(
         model="gpt-3.5-turbo",
@@ -32,16 +36,17 @@ llm, embeddings_model = initialize_models()
 
 # --- 3. Load Data & Create Vector Store (using st.cache_resource for efficiency) ---
 @st.cache_resource
-def create_vector_store(text_content, embeddings_model_obj):
+# ADD A LEADING UNDERSCORE TO THE UNHASHABLE ARGUMENT
+def create_vector_store(text_content, _embeddings_model_obj): # <--- MODIFIED LINE
     st.write("Creating FAISS vector store...")
-    text_splitter = CharacterTextSplitter(
+    text_splitter = CharacterTextSplatter(
         separator="\n",
         chunk_size=1000,
         chunk_overlap=200,
         length_function=len,
     )
     chunks = text_splitter.split_text(text_content)
-    vector_store = FAISS.from_texts(chunks, embeddings_model_obj)
+    vector_store = FAISS.from_texts(chunks, _embeddings_model_obj) # <--- USE THE UNDERSCORED ARGUMENT
     st.write("FAISS vector store created successfully.")
     return vector_store
 
@@ -94,8 +99,7 @@ if prompt := st.chat_input("Ask me about Python..."):
             st.markdown(result)
             with st.expander("See Source Documents"):
                 for doc in source_documents:
-                    st.write(f"- **Content:** {doc.page_content[:200]}...") # Show first 200 chars
+                    st.write(f"- **Content:** {doc.page_content[:200]}...")
 
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": result})
-        # (Optional: You might want to store sources in a separate part of the session_state if you want to redisplay them easily)
