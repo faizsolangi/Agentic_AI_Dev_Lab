@@ -6,4 +6,4 @@ langchain-openai       # LangChain's integration for OpenAI
 streamlit
 crewai
 python-dotenv
-crewai[tools]
+crewai-tools
