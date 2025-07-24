@@ -1,48 +1,46 @@
 import os
-from langchain_community.document_loaders import TextLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 
-# Import Hugging Face components for API calls
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
-from langchain_community.llms import HuggingFaceHub # For LLM generation via Inference API
+# --- NEW IMPORTS for OpenAI ---
+from langchain_openai import OpenAIEmbeddings # For embeddings
+from langchain_openai import ChatOpenAI       # For the LLM
 
-# --- 1. Set up your Hugging Face API Token ---
-# IMPORTANT: Store this securely in Render's environment variables (e.g., HUGGINGFACEHUB_API_TOKEN)
-# DO NOT hardcode your API key directly in the script for production!
-HUGGINGFACEHUB_API_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-print(HUGGINGFACEHUB_API_TOKEN)
+# --- 1. Set up your OpenAI API Key ---
+# IMPORTANT: Ensure this is set securely on Render's environment variables
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-if not HUGGINGFACEHUB_API_TOKEN:
+if not OPENAI_API_KEY:
     raise ValueError(
-        "HUGGINGFACEHUB_API_TOKEN environment variable not set. "
-        "Please get your token from huggingface.co/settings/tokens and set it."
+        "OPENAI_API_KEY environment variable not set. "
+        "Please get your token from platform.openai.com and set it."
     )
 
-# --- 2. Define the LLM (for text generation) ---
-# Using a general text generation model from Hugging Face Hub's Inference API
-# Add the 'task' parameter to resolve the ValidationError
-llm = HuggingFaceHub(
-    repo_id="mistralai/Mixtral-8x7B-Instruct-v0.1", # A good general-purpose model for RAG QA
-    model_kwargs={"temperature": 0.5, "max_length": 512},
-    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
-    task="text2text-generation" # <--- ADDED THIS LINE
+# --- 2. Define the LLM (for text generation) using OpenAI's Chat Model ---
+llm = ChatOpenAI(
+    model="gpt-3.5-turbo", # A good balance of cost and performance
+    temperature=0.7,
+    openai_api_key=OPENAI_API_KEY # LangChain will automatically pick this up from env var if not passed
 )
 
-# --- 3. Define the Embedding Model (for converting text to vectors) ---
-# Using HuggingFace Inference API for embeddings.
-embeddings_model = HuggingFaceInferenceAPIEmbeddings(
-    api_key=HUGGINGFACEHUB_API_TOKEN,
-    model_name="BAAI/bge-small-en-v1.5" # Excellent open-source embedding model
+# --- 3. Define the Embedding Model using OpenAIEmbeddings ---
+embeddings_model = OpenAIEmbeddings(
+    model="text-embedding-3-small", # Cost-effective and powerful embedding model
+    openai_api_key=OPENAI_API_KEY # LangChain will automatically pick this up from env var if not passed
 )
 
-
-# --- 4. Load Data (Keeping it short for quicker testing) ---
+# --- 4. Load Data (can go back to your original longer text now) ---
 raw_text = """
-Python is a programming language.
-It was created in 1991."""
+Python is a high-level, interpreted programming language.
+It was first released in 1991 by Guido van Rossum.
+Python is known for its simplicity and readability, often using indentation to define code blocks.
+It supports multiple programming paradigms, including object-oriented, imperative, and functional programming.
+Python has a vast standard library and a large, active community that contributes to its extensive ecosystem of third-party libraries.
+It is widely used for web development (Django, Flask), data analysis (Pandas, NumPy), artificial intelligence (TensorFlow, PyTorch), scientific computing, and automation.
+The Zen of Python is a collection of 19 "guiding principles" for writing computer programs that influence the design of Python.
+"""
 
 # --- 5. Text Splitting ---
 text_splitter = CharacterTextSplitter(
@@ -55,12 +53,12 @@ chunks = text_splitter.split_text(raw_text)
 
 # --- 6. Create Vector Store (FAISS) ---
 try:
-    print("Creating FAISS vector store with Hugging Face Inference API embeddings...")
+    print("Creating FAISS vector store with OpenAI embeddings...")
     vector_store = FAISS.from_texts(chunks, embeddings_model)
     print("FAISS vector store created successfully.")
 except Exception as e:
     print(f"Error creating FAISS vector store: {e}")
-    print("Ensure your HUGGINGFACEHUB_API_TOKEN is correct and the models are available via Inference API.")
+    print("Ensure your OPENAI_API_KEY is correct and billing is set up on OpenAI.")
     exit()
 
 # --- 7. Set up RetrievalQA Chain ---

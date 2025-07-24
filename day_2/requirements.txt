@@ -1,4 +1,4 @@
 langchain
-langchain-community
-huggingface-hub
-faiss-cpu # or faiss-gpu if you somehow got a GPU instance
+faiss-cpu
+openai                 # OpenAI Python client
+langchain-openai       # LangChain's integration for OpenAI
