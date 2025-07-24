@@ -22,22 +22,16 @@ if not HUGGINGFACEHUB_API_TOKEN:
 
 # --- 2. Define the LLM (for text generation) ---
 # Using a general text generation model from Hugging Face Hub's Inference API
-# Replace with a suitable text generation model on HF that works well with the Inference API
-# Examples: 'google/flan-t5-base', 'HuggingFaceH4/zephyr-7b-beta', 'mistralai/Mistral-7B-v0.1'
-# Be aware of free tier limitations and model capabilities.
-# We'll start with a small, general model.
-# NOTE: Not all models are available for serverless inference or free tier.
-# You might need to experiment with 'repo_id'.
+# Add the 'task' parameter to resolve the ValidationError
 llm = HuggingFaceHub(
     repo_id="google/flan-t5-large", # A good general-purpose model for RAG QA
     model_kwargs={"temperature": 0.5, "max_length": 512},
-    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
+    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
+    task="text2text-generation" # <--- ADDED THIS LINE
 )
 
 # --- 3. Define the Embedding Model (for converting text to vectors) ---
 # Using HuggingFace Inference API for embeddings.
-# This sends text to HF's servers for embedding, avoiding local memory issues.
-# 'BAAI/bge-small-en-v1.5' is a good choice for general embedding.
 embeddings_model = HuggingFaceInferenceAPIEmbeddings(
     api_key=HUGGINGFACEHUB_API_TOKEN,
     model_name="BAAI/bge-small-en-v1.5" # Excellent open-source embedding model
@@ -65,9 +59,6 @@ text_splitter = CharacterTextSplitter(
 chunks = text_splitter.split_text(raw_text)
 
 # --- 6. Create Vector Store (FAISS) ---
-# This part is memory-intensive because it generates embeddings for all chunks.
-# With API-based embeddings, this should now be fine on Render as the actual embedding computation
-# happens remotely.
 try:
     print("Creating FAISS vector store with Hugging Face Inference API embeddings...")
     vector_store = FAISS.from_texts(chunks, embeddings_model)
@@ -75,15 +66,15 @@ try:
 except Exception as e:
     print(f"Error creating FAISS vector store: {e}")
     print("Ensure your HUGGINGFACEHUB_API_TOKEN is correct and the models are available via Inference API.")
-    exit() # Exit if we can't create the vector store
+    exit()
 
 # --- 7. Set up RetrievalQA Chain ---
 qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
-    chain_type="stuff", # 'stuff' combines all retrieved documents into one prompt
+    chain_type="stuff",
     retriever=vector_store.as_retriever(),
     return_source_documents=True,
-    verbose=True # Set to True to see the thought process
+    verbose=True
 )
 
 # --- 8. Query the RAG System ---
@@ -95,7 +86,6 @@ print(response["result"])
 print("\n--- Source Documents ---")
 for doc in response["source_documents"]:
     print(f"- Content: {doc.page_content[:100]}...")
-    # print(f"  Metadata: {doc.metadata}") # No metadata in this simple example
 
 query = "When was Python first released and by whom?"
 print(f"\nQuery: {query}")
