@@ -5,4 +5,3 @@ openai                 # OpenAI Python client
 langchain-openai       # LangChain's integration for OpenAI
 streamlit
 crewai
-'crewai[tools]'
