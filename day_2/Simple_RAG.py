@@ -24,7 +24,7 @@ if not HUGGINGFACEHUB_API_TOKEN:
 # Using a general text generation model from Hugging Face Hub's Inference API
 # Add the 'task' parameter to resolve the ValidationError
 llm = HuggingFaceHub(
-    repo_id="Qwen/Qwen2.5-72B-Instruct", # A good general-purpose model for RAG QA
+    repo_id="mistralai/Mixtral-8x7B-Instruct-v0.1", # A good general-purpose model for RAG QA
     model_kwargs={"temperature": 0.5, "max_length": 512},
     huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
     task="text2text-generation" # <--- ADDED THIS LINE
