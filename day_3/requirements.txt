@@ -1,9 +1,5 @@
-langchain
-langchain-community 
-faiss-cpu
-openai                 # OpenAI Python client
-langchain-openai       # LangChain's integration for OpenAI
-streamlit
-crewai
+crewai==0.28.8
+crewai-tools==0.1.6
+langchain-openai
+langchain-community
 python-dotenv
-crewai-tools
