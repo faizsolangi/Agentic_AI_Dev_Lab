@@ -1,113 +1,109 @@
+import os
 from langchain_community.document_loaders import TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-# We will use a mock LLM for demonstration, as live LLM calls require API keys
-# or a stable local setup, which can be flaky.
-# In a real scenario, replace this with ChatOpenAI, ChatGoogleGenerativeAI, etc.
-from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
+from langchain_core.prompts import PromptTemplate
+from langchain.chains import RetrievalQA
 
-# --- 1. Define your knowledge base ---
-# Let's use a short, simple text about Python programming.
+# Import Hugging Face components for API calls
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_community.llms import HuggingFaceHub # For LLM generation via Inference API
+
+# --- 1. Set up your Hugging Face API Token ---
+# IMPORTANT: Store this securely in Render's environment variables (e.g., HUGGINGFACEHUB_API_TOKEN)
+# DO NOT hardcode your API key directly in the script for production!
+HUGGINGFACEHUB_API_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+
+if not HUGGINGFACEHUB_API_TOKEN:
+    raise ValueError(
+        "HUGGINGFACEHUB_API_TOKEN environment variable not set. "
+        "Please get your token from huggingface.co/settings/tokens and set it."
+    )
+
+# --- 2. Define the LLM (for text generation) ---
+# Using a general text generation model from Hugging Face Hub's Inference API
+# Replace with a suitable text generation model on HF that works well with the Inference API
+# Examples: 'google/flan-t5-base', 'HuggingFaceH4/zephyr-7b-beta', 'mistralai/Mistral-7B-v0.1'
+# Be aware of free tier limitations and model capabilities.
+# We'll start with a small, general model.
+# NOTE: Not all models are available for serverless inference or free tier.
+# You might need to experiment with 'repo_id'.
+llm = HuggingFaceHub(
+    repo_id="google/flan-t5-large", # A good general-purpose model for RAG QA
+    model_kwargs={"temperature": 0.5, "max_length": 512},
+    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
+)
+
+# --- 3. Define the Embedding Model (for converting text to vectors) ---
+# Using HuggingFace Inference API for embeddings.
+# This sends text to HF's servers for embedding, avoiding local memory issues.
+# 'BAAI/bge-small-en-v1.5' is a good choice for general embedding.
+embeddings_model = HuggingFaceInferenceAPIEmbeddings(
+    api_key=HUGGINGFACEHUB_API_TOKEN,
+    model_name="BAAI/bge-small-en-v1.5" # Excellent open-source embedding model
+)
+
+
+# --- 4. Load Data (Keeping it short for quicker testing) ---
 raw_text = """
-Python is a high-level, interpreted programming language. It was first released in 1991 by Guido van Rossum."""
+Python is a high-level, interpreted programming language.
+It was first released in 1991 by Guido van Rossum.
+Python is known for its simplicity and readability, often using indentation to define code blocks.
+It supports multiple programming paradigms, including object-oriented, imperative, and functional programming.
+Python has a vast standard library and a large, active community that contributes to its extensive ecosystem of third-party libraries.
+It is widely used for web development (Django, Flask), data analysis (Pandas, NumPy), artificial intelligence (TensorFlow, PyTorch), scientific computing, and automation.
+The Zen of Python is a collection of 19 "guiding principles" for writing computer programs that influence the design of Python.
+"""
 
-# --- 2. Load the document (in this simple case, we just treat the string as a document) ---
-# For more complex scenarios, you'd use TextLoader('your_file.txt') or PyPDFLoader, etc.
-# For this example, we'll create a single document manually.
-from langchain_core.documents import Document
-documents = [Document(page_content=raw_text, metadata={"source": "python_basics"})]
-print(f"Original document length: {len(raw_text)} characters")
-
-# --- 3. Split the text into smaller chunks ---
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=100,      # Max characters per chunk
-    chunk_overlap=20,    # Overlap between chunks to maintain context
+# --- 5. Text Splitting ---
+text_splitter = CharacterTextSplitter(
+    separator="\n",
+    chunk_size=1000,
+    chunk_overlap=200,
     length_function=len,
-    is_separator_regex=False,
 )
-chunks = text_splitter.split_documents(documents)
-print(f"Number of chunks created: {len(chunks)}")
-# print("\nFirst few chunks:")
-# for i, chunk in enumerate(chunks[:3]):
-#     print(f"Chunk {i+1}: {chunk.page_content[:50]}...") # Print first 50 chars of chunk
+chunks = text_splitter.split_text(raw_text)
 
-# --- 4. Create embeddings for these chunks ---
-# Using a local Sentence Transformer model: all-MiniLM-L6-v2
-# This model is small and efficient, perfect for local use and demonstrations.
-# It will download the model the first time it runs.
-print("\nInitializing Embedding Model (may download model)...")
-embeddings_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-print("Embedding Model initialized.")
+# --- 6. Create Vector Store (FAISS) ---
+# This part is memory-intensive because it generates embeddings for all chunks.
+# With API-based embeddings, this should now be fine on Render as the actual embedding computation
+# happens remotely.
+try:
+    print("Creating FAISS vector store with Hugging Face Inference API embeddings...")
+    vector_store = FAISS.from_texts(chunks, embeddings_model)
+    print("FAISS vector store created successfully.")
+except Exception as e:
+    print(f"Error creating FAISS vector store: {e}")
+    print("Ensure your HUGGINGFACEHUB_API_TOKEN is correct and the models are available via Inference API.")
+    exit() # Exit if we can't create the vector store
 
-# --- 5. Set up an in-memory Vector Store (FAISS) ---
-# FAISS is excellent for local, in-memory vector storage and similarity search.
-# We create it from our documents and their embeddings.
-print("Creating Vector Store (FAISS) from chunks...")
-vector_store = FAISS.from_documents(chunks, embeddings_model)
-print("Vector Store created.")
-
-# --- 6. Create a Retriever ---
-# The vector store can be directly converted into a retriever.
-# We'll retrieve the top 2 most relevant chunks.
-retriever = vector_store.as_retriever(search_kwargs={"k": 2})
-print("Retriever created.")
-
-# --- 7. Define the Prompt Template for the LLM ---
-# This template tells the LLM how to use the retrieved context.
-prompt_template = ChatPromptTemplate.from_template("""
-You are an assistant for question-answering tasks. Use the following pieces of retrieved context
-to answer the question. If you don't know the answer, just say that you don't know.
-Do not make up any information.
-
-Context:
-{context}
-
-Question: {question}
-""")
-
-# --- 8. Define a Mock LLM for demonstration ---
-# In a real application, you'd replace this with a live LLM instance.
-class MockLLM:
-    def invoke(self, prompt: BaseMessage) -> AIMessage:
-        # For simplicity, we'll just print the constructed prompt
-        # and give a placeholder answer.
-        # In a real scenario, the LLM processes this prompt and generates a real answer.
-        print("\n--- Mock LLM received this prompt for generation ---")
-        print(prompt.content)
-        print("--------------------------------------------------")
-        # Simulate an LLM response based on the prompt content for demonstration
-        if "Python" in prompt.content and "Guido van Rossum" in prompt.content:
-            return AIMessage(content="Based on the provided context, Python was first released in 1991 by Guido van Rossum. It's known for readability and used in web development, data analysis, and AI.")
-        else:
-             return AIMessage(content="I don't have enough information in the provided context to answer that question accurately.")
-
-
-llm = MockLLM()
-output_parser = StrOutputParser() # To parse the LLM's output to a string
-
-# --- 9. Assemble the RAG chain ---
-# This is the core RAG chain:
-# Query -> Retrieve -> (Context + Query) -> LLM -> Answer
-rag_chain = (
-    {"context": retriever, "question": RunnablePassthrough()}
-    | prompt_template
-    | llm
-    | output_parser
+# --- 7. Set up RetrievalQA Chain ---
+qa_chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="stuff", # 'stuff' combines all retrieved documents into one prompt
+    retriever=vector_store.as_retriever(),
+    return_source_documents=True,
+    verbose=True # Set to True to see the thought process
 )
 
-# --- 10. Run a query ---
-query = "When was Python released and who created it? What is it used for?"
-print(f"\nUser Query: {query}")
-response = rag_chain.invoke(query)
-print(f"\nFinal RAG System Response:\n{response}")
+# --- 8. Query the RAG System ---
+query = "What is Python known for?"
+print(f"\nQuery: {query}")
+response = qa_chain.invoke({"query": query})
+print("\n--- Response ---")
+print(response["result"])
+print("\n--- Source Documents ---")
+for doc in response["source_documents"]:
+    print(f"- Content: {doc.page_content[:100]}...")
+    # print(f"  Metadata: {doc.metadata}") # No metadata in this simple example
 
-# --- Another query (less relevant) ---
-print("\n" + "="*50 + "\n")
-query_irrelevant = "What is the capital of France?"
-print(f"User Query: {query_irrelevant}")
-response_irrelevant = rag_chain.invoke(query_irrelevant)
-print(f"\nFinal RAG System Response:\n{response_irrelevant}")
+query = "When was Python first released and by whom?"
+print(f"\nQuery: {query}")
+response = qa_chain.invoke({"query": query})
+print("\n--- Response ---")
+print(response["result"])
+print("\n--- Source Documents ---")
+for doc in response["source_documents"]:
+    print(f"- Content: {doc.page_content[:100]}...")
+
+print("\nScript finished.")

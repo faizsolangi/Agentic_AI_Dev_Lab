@@ -1,4 +1,4 @@
-langchain 
-langchain-community 
-faiss-cpu 
-sentence-transformers
+langchain
+langchain-community
+huggingface_hub
+faiss-cpu # or faiss-gpu if you somehow got a GPU instance
