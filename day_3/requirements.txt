@@ -4,3 +4,5 @@ langchain-openai
 langchain-community
 python-dotenv
 setuptools
+faiss-cpu
+tiktoken
