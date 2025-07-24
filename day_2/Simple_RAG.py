@@ -41,9 +41,8 @@ embeddings_model = HuggingFaceInferenceAPIEmbeddings(
 
 # --- 4. Load Data (Keeping it short for quicker testing) ---
 raw_text = """
-Python is a high-level, interpreted programming language.
-It was first released in 1991 by Guido van Rossum.
-Python is known for its simplicity and readability, often using indentation to define code blocks."""
+Python is a programming language.
+It was created in 1991."""
 
 # --- 5. Text Splitting ---
 text_splitter = CharacterTextSplitter(
