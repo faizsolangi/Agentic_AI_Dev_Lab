@@ -190,7 +190,7 @@ if st.session_state.training_running and st.session_state.current_episode < tota
         # Give Streamlit a moment to update UI for smoother progress bar (optional, might slow down training for very fast loops)
         # time.sleep(0.001) 
 
-    st.experimental_rerun() # Rerun Streamlit to show latest data and continue loop if training_running is True
+    st.rerun() # Rerun Streamlit to show latest data and continue loop if training_running is True
 
 if st.session_state.current_episode >= total_episodes_to_train:
     st.session_state.training_running = False
