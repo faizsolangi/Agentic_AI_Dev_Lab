@@ -4,7 +4,7 @@ import random
 import pandas as pd
 import time # For simulation of progress
 
-# --- Environment Definition (Same as before) ---
+# --- Environment Definition (Slightly modified) ---
 class GridWorld:
     def __init__(self):
         self.grid_size = 3
@@ -22,38 +22,14 @@ class GridWorld:
         }
         self.num_actions = len(self.actions)
 
-        # Rewards: default -1 per step, Goal +10, Hole -10
         self.rewards_map = self._build_rewards_map()
-        
         self.transition_matrix = self._build_transition_matrix()
 
     def _build_rewards_map(self):
-        # Rewards associated with *landing* in a state or achieving a goal/hole transition
-        rewards = np.full((self.num_states, self.num_actions), -0.1) # Small penalty for each step
-
-        # Example: Reward for entering goal state from specific adjacent states
-        # The agent gets +10 for reaching the goal, and -10 for the hole.
-        # This setup assumes the reward is received upon *entering* the next state.
-        # For simplicity in this env, we assign specific rewards for actions leading to goal/hole
-        
-        # From state 5, going RIGHT to 8 (goal)
-        rewards[5, 3] = 10.0
-        # From state 7, going UP to 8 (goal)
-        rewards[7, 0] = 10.0
-        
-        # From state 1, going DOWN to 4 (hole)
-        rewards[1, 1] = -10.0
-        # From state 3, going RIGHT to 4 (hole)
-        rewards[3, 3] = -10.0
-        # From state 5, going LEFT to 4 (hole)
-        rewards[5, 2] = -10.0
-        # From state 7, going UP to 4 (hole) -- if this action from 7 can lead to hole, which it shouldn't here.
-        # Re-evaluating based on actual transitions for clarity:
-        # State 0: S . .
-        # State 1: . H . (state 4 is hole)
-        # State 2: . . G (state 8 is goal)
-
-        # Let's just make sure final states have their specific rewards and are terminal.
+        # Changed: Initial step reward is now 0.0 (instead of -0.1 or -1.0).
+        # This makes it easier for positive rewards to propagate without being diluted by constant small penalties
+        # until the goal is found. The step() function still applies goal/hole specific rewards.
+        rewards = np.full((self.num_states, self.num_actions), 0.0) 
         return rewards
 
     def _build_transition_matrix(self):
@@ -78,7 +54,7 @@ class GridWorld:
 
     def step(self, action):
         next_state = self.transition_matrix[self.current_state][action]
-        reward = self.rewards_map[self.current_state, action] # Base step reward
+        reward = self.rewards_map[self.current_state, action] # Base step reward (now 0.0)
 
         done = False
         if next_state == self.goal_state:
@@ -117,9 +93,10 @@ class QLearningAgent:
         self.q_table[state, action] = new_q
 
     def decay_exploration_rate(self, episode):
+        # Decay from initial (1.0) down to min_exploration_rate
         self.exploration_rate = self.min_exploration_rate + \
                                (1.0 - self.min_exploration_rate) * \
-                               np.exp(-self.exploration_decay_rate * episode) # Use 1.0 as start for consistent decay
+                               np.exp(-self.exploration_decay_rate * episode) 
 
 # --- Streamlit App ---
 st.set_page_config(layout="wide")
@@ -138,8 +115,8 @@ if 'training_running' not in st.session_state:
     st.session_state.training_running = False
 
 # Hyperparameters (can be made interactive with st.slider if desired)
-total_episodes_to_train = 5000
-episodes_per_run = 50 # How many episodes to train per Streamlit loop/button click
+total_episodes_to_train = 10000 # Increased total episodes to allow more learning
+episodes_per_run = 100 # Increased number of episodes to run per Streamlit refresh
 
 # Display current status
 st.sidebar.header("Training Controls & Status")
@@ -161,6 +138,7 @@ elif col2.button("Stop Training"):
     st.session_state.training_running = False
     st.write("Training stopped.")
 
+# --- Training Logic ---
 if st.session_state.training_running and st.session_state.current_episode < total_episodes_to_train:
     # Run a batch of episodes
     for _ in range(episodes_per_run):
@@ -171,26 +149,26 @@ if st.session_state.training_running and st.session_state.current_episode < tota
         state = st.session_state.env.reset()
         done = False
         total_reward = 0
+        steps_in_episode = 0
+        max_steps_per_episode = 100 # Prevent infinite loops in a single episode
 
-        while not done:
+        while not done and steps_in_episode < max_steps_per_episode:
             action = st.session_state.agent.choose_action(state)
             next_state, reward, done = st.session_state.env.step(action)
             st.session_state.agent.learn(state, action, reward, next_state)
             state = next_state
             total_reward += reward
+            steps_in_episode += 1
         
         st.session_state.total_rewards_history.append(total_reward)
         st.session_state.agent.decay_exploration_rate(st.session_state.current_episode)
         st.session_state.current_episode += 1
 
-        # Update progress bar
+        # Update progress bar every few episodes or at end of batch
         progress_percentage = min(100, int((st.session_state.current_episode / total_episodes_to_train) * 100))
         progress_bar.progress(progress_percentage, text=f"Training Progress ({st.session_state.current_episode}/{total_episodes_to_train} Episodes)")
         
-        # Give Streamlit a moment to update UI for smoother progress bar (optional, might slow down training for very fast loops)
-        # time.sleep(0.001) 
-
-    st.rerun() # Rerun Streamlit to show latest data and continue loop if training_running is True
+    st.experimental_rerun() # Rerun Streamlit to show latest data and continue loop if training_running is True
 
 if st.session_state.current_episode >= total_episodes_to_train:
     st.session_state.training_running = False
