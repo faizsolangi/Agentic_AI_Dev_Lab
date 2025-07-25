@@ -168,7 +168,7 @@ if st.session_state.training_running and st.session_state.current_episode < tota
         progress_percentage = min(100, int((st.session_state.current_episode / total_episodes_to_train) * 100))
         progress_bar.progress(progress_percentage, text=f"Training Progress ({st.session_state.current_episode}/{total_episodes_to_train} Episodes)")
         
-    st.experimental_rerun() # Rerun Streamlit to show latest data and continue loop if training_running is True
+    st.rerun() # Rerun Streamlit to show latest data and continue loop if training_running is True
 
 if st.session_state.current_episode >= total_episodes_to_train:
     st.session_state.training_running = False
