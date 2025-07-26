@@ -1,3 +1,4 @@
+streamlit
 langgraph
 langchain
 langchain_openai
