@@ -64,9 +64,15 @@ class TreasureHuntGame:
         if "go west" in llm_response: return ("go", "west")
 
         if "pick up" in llm_response or "take" in llm_response:
-            for item in ["shiny key", "old wooden chest"]: # List items that can be picked up
-                if item in llm_response:
-                    return ("pick_up", item)
+            if "shiny key" in llm_response:
+                return ("pick_up", "shiny key")
+            # Added a more flexible check for "shiny item" if "shiny key" is available in the current location
+            elif "shiny item" in llm_response and "shiny key" in self.locations[self.current_location_key]["items"]:
+                return ("pick_up", "shiny key")
+            elif "old wooden chest" in llm_response:
+                # While a chest isn't typically "picked up", the LLM might try this.
+                # We handle it here and let the game logic give the specific feedback.
+                return ("pick_up", "old wooden chest")
 
         if "open chest" in llm_response and "chest" in llm_response:
             return ("open", "chest")
@@ -90,18 +96,19 @@ class TreasureHuntGame:
             else:
                 feedback = f"You cannot go {target} from here. Try a different direction."
         elif action_type == "pick_up":
-            if target in current_location["items"]:
+            if target == "shiny key" and "shiny key" in current_location["items"]:
                 self.inventory.append(target)
                 current_location["items"].remove(target)
                 feedback = f"You picked up the {target}."
-                if target == "shiny key":
-                    feedback += "\nThis might be useful."
+                feedback += "\nThis might be useful."
+            elif target == "old wooden chest": # Can't pick up the chest
+                feedback = "You can't pick up the entire chest. You need to open it."
             else:
                 feedback = f"There is no {target} here to pick up."
         elif action_type == "open" and target == "chest":
             if self.current_location_key == "mountain_pass":
                 if "shiny key" in self.inventory:
-                    feedback = "You used the shiny key to open the old wooden chest! Inside, you find a dazzling pile of gold and jewels! **YOU WIN!**"
+                    feedback = "You used the shiny shiny key to open the old wooden chest! Inside, you find a dazzling pile of gold and jewels! **YOU WIN!**"
                     reward = 100 # Huge reward for winning
                     self.game_over = True
                     self.win = True
@@ -111,7 +118,7 @@ class TreasureHuntGame:
             else:
                 feedback = "There is no chest here to open."
         else:
-            feedback = "I don't understand that action. Please be specific, like 'go north', 'pick up key', or 'open chest'."
+            feedback = "I don't understand that action. Please be specific, like 'go north', 'pick up shiny key', or 'open chest'. Remember to use these exact phrases."
 
         return feedback, reward, self.game_over
 
@@ -151,8 +158,9 @@ with col1:
         st.session_state.game_env = TreasureHuntGame()
         st.session_state.game_log = []
         st.session_state.llm_chat_history = []
+        # UPDATED SYSTEM MESSAGE: More explicit about required actions
         st.session_state.llm_chat_history.append(
-            SystemMessage(content="You are an adventurer exploring a text-based treasure hunt. Your goal is to find the hidden treasure. You will be given descriptions of your current location and inventory. You must respond with clear, concise actions like 'go north', 'pick up [item]', or 'open [object]'. Do not include any other text or conversation, just the action. If you find the treasure, celebrate!"))
+            SystemMessage(content="You are an adventurer exploring a text-based treasure hunt. Your goal is to find the hidden treasure. You will be given descriptions of your current location and inventory. You must respond with clear, concise actions. Valid actions are: 'go north', 'go south', 'go east', 'go west', 'pick up shiny key', 'open chest'. Respond ONLY with one of these exact actions. Do not include any other text, conversation, or explanations. If you find the treasure, celebrate!"))
         st.session_state.llm_chat_history.append(
             HumanMessage(content=st.session_state.game_env.get_current_state_description())
         )
@@ -166,6 +174,8 @@ with col1:
             with st.spinner("LLM is thinking..."):
                 ai_response = st.session_state.llm.invoke(st.session_state.llm_chat_history)
                 llm_action_text = ai_response.content.strip()
+
+            st.write(f"LLM's raw action: `{llm_action_text}`") # For debugging
 
             # Process action in game environment
             feedback, reward, game_over = st.session_state.game_env.take_action(llm_action_text)
