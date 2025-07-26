@@ -185,7 +185,7 @@ if st.sidebar.button("Reset & Apply Params", disabled=not params_changed):
     st.session_state.total_rewards_history = []
     st.session_state.current_episode = 0
     st.session_state.training_running = False # Ensure training stops when params reset
-    st.experimental_rerun() # Rerun to apply changes and clear dashboard state
+    st.rerun() # Rerun to apply changes and clear dashboard state
 
 
 st.sidebar.markdown("---")
