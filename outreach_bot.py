@@ -22,7 +22,7 @@ sheet = client.open_by_key("YOUR_SPREADSHEET_ID").sheet1  # Replace with your ID
 # Apollo.io API for searching coaching leads
 def scrape_leads():
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/api/v1/mixed_people/search"
+    url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {"Content-Type": "application/json"}
     payload = {
         "api_key": api_key,
