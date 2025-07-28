@@ -33,7 +33,7 @@ for key, value in creds_data.items():
         raise ValueError(f"Missing or empty environment variable: {key}")
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_data, scope)
 client = gspread.authorize(creds)
-spreadsheet_id = os.getenv("Your_SPREADSHEET_ID")
+spreadsheet_id = os.getenv("GOOGLE_SPREADSHEET_ID")
 if not spreadsheet_id:
     raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
 sheet = client.open_by_key(spreadsheet_id).sheet1
