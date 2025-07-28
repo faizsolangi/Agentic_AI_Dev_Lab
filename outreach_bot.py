@@ -115,6 +115,7 @@ def score_leads(leads):
     )
     task = Task(
         description="Score leads based on industry and title: +10 for 'Coach' titles, +5 for 'Training' or 'Consultant' roles, +2 for Coaching industry",
+        expected_output="A list of dictionaries containing 'name', 'score', and 'email' for each lead",
         agent=scorer
     )
     crew = Crew(agents=[scorer], tasks=[task])
