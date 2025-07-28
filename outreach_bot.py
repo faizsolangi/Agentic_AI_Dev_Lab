@@ -151,7 +151,7 @@ def run_dashboard():
             if lead["email"]:
                 email_content = generate_email(lead["name"], "Coaching")
                 send_email(lead["email"], email_content)
-        st.experimental_rerun()
+        st.rerun()
 
 # Render web service entry point
 import sys
