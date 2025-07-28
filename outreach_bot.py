@@ -41,7 +41,7 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 # Apollo.io API for searching coaching leads
 def scrape_leads():
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/api/v1/contacts/search"
+    url = "https://api.apollo.io/api/v1/mixed_people/search"
     headers = {"Content-Type": "application/json"}
     payload = {
         "api_key": api_key,
