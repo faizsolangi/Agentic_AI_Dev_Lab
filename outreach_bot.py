@@ -17,14 +17,24 @@ load_dotenv()
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
 client = gspread.authorize(creds)
-sheet = client.open("Coaching Leads Tracker").sheet1
+sheet = client.open_by_key("YOUR_SPREADSHEET_ID").sheet1  # Replace with your ID
 
-# Apollo.io API for scraping coaching leads
+# Apollo.io API for searching coaching leads
 def scrape_leads():
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/v1/people"
-    params = {"api_key": api_key, "industry": "Coaching", "per_page": 50}
-    response = requests.get(url, params=params)
+    url = "https://api.apollo.io/api/v1/mixed_people/search"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "api_key": api_key,
+        "q_operators": {
+            "industry": "Coaching"
+        },
+        "per_page": 50
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    print(f"Response status: {response.status_code}")
+    print(f"Response headers: {response.headers}")
+    print(f"Response text: {response.text}")
     if response.status_code != 200:
         raise Exception(f"Apollo API error: {response.status_code} - {response.text}")
     leads = response.json().get("people", [])
@@ -33,9 +43,9 @@ def scrape_leads():
             lead.get("name", "Unknown"),
             lead.get("email", ""),
             lead.get("industry", "Coaching"),
-            "New",  # Initial status
-            0,     # Initial score
-            ""     # Initial message
+            "New",
+            0,
+            ""
         ])
     return leads
 
@@ -104,7 +114,6 @@ def run_dashboard():
         email = lead.get("email", "")
         industry = lead.get("industry", "Coaching")
         score = next((s["score"] for s in score_leads([lead]) if s["name"] == name), 0)
-        # Fetch status from sheet (approximate row based on lead index)
         status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
         st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
     if st.button("Refresh Leads and Send Emails"):
