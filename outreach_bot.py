@@ -15,15 +15,29 @@ load_dotenv()
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+creds_data = {
+    "type": os.getenv("GOOGLE_TYPE"),
+    "project_id": os.getenv("GOOGLE_PROJECT_ID"),
+    "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID"),
+    "private_key": os.getenv("GOOGLE_PRIVATE_KEY"),
+    "client_email": os.getenv("GOOGLE_CLIENT_EMAIL"),
+    "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+    "auth_uri": os.getenv("GOOGLE_AUTH_URI"),
+    "token_uri": os.getenv("GOOGLE_TOKEN_URI"),
+    "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL"),
+    "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL")
+}
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_data, scope)
 client = gspread.authorize(creds)
 spreadsheet_id = os.getenv("YOUR_SPREADSHEET_ID")
-sheet = client.open_by_key("spreadsheet_id").sheet1  # Replace with your ID
+if not spreadsheet_id:
+    raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
+sheet = client.open_by_key(spreadsheet_id).sheet1
 
 # Apollo.io API for searching coaching leads
 def scrape_leads():
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/api/v1/contacts/search"
+    url = "https://api.apollo.io/api/v1/mixed_people/search"
     headers = {"Content-Type": "application/json"}
     payload = {
         "api_key": api_key,
