@@ -1,1 +1,7 @@
-numpy
+requests
+notion-client
+langchain
+langchain-openai
+streamlit
+crewai
+python-dotenv
