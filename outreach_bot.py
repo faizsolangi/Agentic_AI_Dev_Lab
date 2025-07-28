@@ -15,17 +15,23 @@ load_dotenv()
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+private_key = os.getenv("GOOGLE_PRIVATE_KEY")
+print(f"Raw private_key: {private_key}")  # Debug raw input
+# Ensure \\n is replaced with actual newlines, and handle any double escaping
+if "\\n" in private_key:
+    private_key = private_key.replace("\\n", "\n")
+    print(f"Adjusted private_key: {private_key}")
 creds_data = {
     "type": os.getenv("GOOGLE_TYPE", "service_account"),
     "project_id": os.getenv("GOOGLE_PROJECT_ID"),
     "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID"),
-    "private_key": os.getenv("GOOGLE_PRIVATE_KEY"),
+    "private_key": private_key,
     "client_email": os.getenv("GOOGLE_CLIENT_EMAIL"),
     "client_id": os.getenv("GOOGLE_CLIENT_ID"),
     "auth_uri": os.getenv("GOOGLE_AUTH_URI", "https://accounts.google.com/o/oauth2/auth"),
     "token_uri": os.getenv("GOOGLE_TOKEN_URI", "https://oauth2.googleapis.com/token"),
     "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
-    "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", "https://www.googleapis.com/robot/v1/metadata/x509/your-service-account%40your-project.iam.gserviceaccount.com")
+    "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", "https://www.googleapis.com/robot/v1/metadata/x509/outreachbottracker%40coaching-leads-tracker.iam.gserviceaccount.com")
 }
 print(f"Credentials data: {creds_data}")
 for key, value in creds_data.items():
@@ -41,7 +47,7 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 # Apollo.io API for searching coaching leads
 def scrape_leads():
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/api/v1/mixed_people/search"
+    url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {"Content-Type": "application/json"}
     payload = {
         "api_key": api_key,
