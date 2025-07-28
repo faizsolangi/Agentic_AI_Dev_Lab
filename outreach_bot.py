@@ -27,9 +27,13 @@ creds_data = {
     "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL"),
     "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL")
 }
+print(f"Credentials data: {creds_data}")
+for key, value in creds_data.items():
+    if not value:
+        raise ValueError(f"Missing or empty environment variable: {key}")
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_data, scope)
 client = gspread.authorize(creds)
-spreadsheet_id = os.getenv("YOUR_SPREADSHEET_ID")
+spreadsheet_id = os.getenv("Your_SPREADSHEET_ID")
 if not spreadsheet_id:
     raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
 sheet = client.open_by_key(spreadsheet_id).sheet1
@@ -37,7 +41,7 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 # Apollo.io API for searching coaching leads
 def scrape_leads():
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/api/v1/mixed_people/search"
+    url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {"Content-Type": "application/json"}
     payload = {
         "api_key": api_key,
