@@ -17,7 +17,8 @@ load_dotenv()
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
 client = gspread.authorize(creds)
-sheet = client.open_by_key("YOUR_SPREADSHEET_ID").sheet1  # Replace with your ID
+spreadsheet_id = os.getenv("YOUR_SPREADSHEET_ID")
+sheet = client.open_by_key("spreadsheet_id").sheet1  # Replace with your ID
 
 # Apollo.io API for searching coaching leads
 def scrape_leads():
