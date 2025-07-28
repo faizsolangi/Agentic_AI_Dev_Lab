@@ -1,49 +1,42 @@
 import requests
 import smtplib
 from email.mime.text import MIMEText
-from notion_client import Client
 from langchain import LLMChain, PromptTemplate
 from langchain_openai import ChatOpenAI
 import streamlit as st
 from crewai import Agent, Task, Crew
-import asyncio
-import platform
 import os
 from dotenv import load_dotenv
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Notion client
-notion = Client(auth=os.getenv("NOTION_API_KEY"))
-database_id = os.getenv("NOTION_DATABASE_ID")
-
-# SMTP configuration for Google Workspace
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USER = os.getenv("SMTP_USER", "outreach@solinnovate.io")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+# Google Sheets setup
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+client = gspread.authorize(creds)
+sheet = client.open("Coaching Leads Tracker").sheet1
 
 # Apollo.io API for scraping coaching leads
-def scrape_leads(api_key, industry="Coaching", limit=50):
+def scrape_leads():
+    api_key = os.getenv("APOLLO_API_KEY")
     url = "https://api.apollo.io/v1/people"
-    params = {"api_key": api_key, "industry": industry, "per_page": limit}
+    params = {"api_key": api_key, "industry": "Coaching", "per_page": 50}
     response = requests.get(url, params=params)
     if response.status_code != 200:
         raise Exception(f"Apollo API error: {response.status_code} - {response.text}")
     leads = response.json().get("people", [])
     for lead in leads:
-        notion.pages.create(
-            parent={"database_id": database_id},
-            properties={
-                "Name": {"title": [{"text": {"content": lead.get("name", "Unknown")}}]},
-                "Email": {"email": lead.get("email", "")},
-                "Industry": {"select": {"name": lead.get("industry", "Coaching")}},
-                "Status": {"select": {"name": "New"}},  # Manual tracking
-                "Score": {"number": 0},
-                "Message": {"rich_text": [{"text": {"content": ""}}]}
-            }
-        )
+        sheet.append_row([
+            lead.get("name", "Unknown"),
+            lead.get("email", ""),
+            lead.get("industry", "Coaching"),
+            "New",  # Initial status
+            0,     # Initial score
+            ""     # Initial message
+        ])
     return leads
 
 # LangChain for generating coaching-specific emails
@@ -67,28 +60,24 @@ def generate_email(name, industry):
 def send_email(to_email, email_content):
     msg = MIMEText(email_content)
     msg["Subject"] = "Free 15-Min Coaching Workflow Audit"
-    msg["From"] = SMTP_USER
+    msg["From"] = os.getenv("SMTP_USER", "outreach@solinnovate.io")
     msg["To"] = to_email
-
-    try:
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_USER, to_email, msg.as_string())
-        print(f"Email sent successfully to {to_email}")
-    except Exception as e:
-        print(f"Failed to send email to {to_email}: {e}")
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(os.getenv("SMTP_USER", "outreach@solinnovate.io"), os.getenv("SMTP_PASSWORD"))
+        server.sendmail(os.getenv("SMTP_USER", "outreach@solinnovate.io"), to_email, msg.as_string())
+    print(f"Email sent successfully to {to_email}")
 
 # CrewAI for lead scoring
 def score_leads(leads):
     scorer = Agent(
         role="Lead Scorer",
-        goal="Score coaching leads based on industry fit",
+        goal="Score coaching leads based on Apollo data",
         backstory="Expert in evaluating coaching professionals",
         llm=ChatOpenAI(model="gpt-4o-mini", openai_api_key=os.getenv("OPENAI_API_KEY"))
     )
     task = Task(
-        description="Score leads based on industry (e.g., +10 for Coaching, +5 for Training)",
+        description="Score leads based on industry and title: +10 for 'Coach' titles, +5 for 'Training' or 'Consultant' roles, +2 for Coaching industry",
         agent=scorer
     )
     crew = Crew(agents=[scorer], tasks=[task])
@@ -96,48 +85,43 @@ def score_leads(leads):
     scored_leads = []
     for lead in leads:
         industry = lead.get("industry", "Coaching")
-        score = 10 if industry == "Coaching" else 5 if "Training" in industry else 0
-        scored_leads.append({"name": lead.get("name", "Unknown"), "score": score})
+        title = lead.get("title", "").lower()
+        base_score = 2 if industry == "Coaching" else 0
+        title_score = 10 if "coach" in title else 5 if "training" in title or "consultant" in title else 0
+        total_score = base_score + title_score
+        scored_leads.append({"name": lead.get("name", "Unknown"), "score": total_score, "email": lead.get("email", "")})
     return scored_leads
 
 # Streamlit dashboard
 def run_dashboard():
     st.title("Coaching Outreach Bot Dashboard")
-    leads = notion.databases.query(database_id=database_id)["results"]
+    if "leads" not in st.session_state:
+        st.session_state.leads = scrape_leads()
+    leads = st.session_state.leads
     st.write("### Leads Overview")
-    for lead in leads:
-        name = lead["properties"]["Name"]["title"][0]["text"]["content"]
-        email = lead["properties"]["Email"]["email"]
-        industry = lead["properties"]["Industry"]["select"]["name"]
-        status = lead["properties"]["Status"]["select"]["name"]
-        score = lead["properties"]["Score"]["number"]
-        st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
-    if st.button("Refresh Scores"):
-        api_key = os.getenv("APOLLO_API_KEY")
-        leads = scrape_leads(api_key)
-        scored_leads = score_leads(leads)
-        for lead, scored in zip(leads, scored_leads):
-            st.write(f"Scored {scored['name']}: {scored['score']}")
-        st.experimental_rerun()
-
-# Main function
-async def main():
-    api_key = os.getenv("APOLLO_API_KEY")
-    # Step 1: Scrape coaching leads
-    leads = scrape_leads(api_key, industry="Coaching")
-    # Step 2: Generate and send emails
-    for lead in leads:
+    for i, lead in enumerate(leads):
         name = lead.get("name", "Unknown")
         email = lead.get("email", "")
-        if email:
-            email_content = generate_email(name, "Coaching")
-            send_email(email, email_content)
-    # Step 3: Run dashboard
-    run_dashboard()
+        industry = lead.get("industry", "Coaching")
+        score = next((s["score"] for s in score_leads([lead]) if s["name"] == name), 0)
+        # Fetch status from sheet (approximate row based on lead index)
+        status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
+        st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
+    if st.button("Refresh Leads and Send Emails"):
+        st.session_state.leads = scrape_leads()
+        scored_leads = score_leads(st.session_state.leads)
+        for lead in scored_leads:
+            if lead["email"]:
+                email_content = generate_email(lead["name"], "Coaching")
+                send_email(lead["email"], email_content)
+        st.experimental_rerun()
 
-# Pyodide-compatible main loop
-if platform.system() == "Emscripten":
-    asyncio.ensure_future(main())
-else:
-    if __name__ == "__main__":
-        asyncio.run(main())
+# Render web service entry point
+import sys
+import waitress
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "render":
+        waitress.serve(run_dashboard, host="0.0.0.0", port=8080)
+    else:
+        run_dashboard()

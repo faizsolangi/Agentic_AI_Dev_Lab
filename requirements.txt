@@ -1,7 +1,9 @@
 requests
-notion-client
 langchain
 langchain-openai
 streamlit
 crewai
 python-dotenv
+waitress
+gspread
+oauth2client
