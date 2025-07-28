@@ -48,9 +48,11 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 def scrape_leads():
     api_key = os.getenv("APOLLO_API_KEY")
     url = "https://api.apollo.io/api/v1/contacts/search"
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "X-Api-Key": api_key
+    }
     payload = {
-        "api_key": api_key,
         "q_operators": {
             "industry": "Coaching"
         },
