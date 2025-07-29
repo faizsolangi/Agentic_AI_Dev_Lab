@@ -17,7 +17,7 @@ load_dotenv()
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 private_key = os.getenv("GOOGLE_PRIVATE_KEY")
-print(f"Raw private_key: {private_key}")  # Debug raw input
+#print(f"Raw private_key: {private_key}")  # Debug raw input
 if "\\n" in private_key:
     private_key = private_key.replace("\\n", "\n")
     print(f"Adjusted private_key: {private_key}")
@@ -33,7 +33,7 @@ creds_data = {
     "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
     "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", "https://www.googleapis.com/robot/v1/metadata/x509/outreachbottracker%40coaching-leads-tracker.iam.gserviceaccount.com")
 }
-print(f"Credentials data: {creds_data}")
+#print(f"Credentials data: {creds_data}")
 for key, value in creds_data.items():
     if not value:
         raise ValueError(f"Missing or empty environment variable: {key}")
