@@ -44,47 +44,53 @@ if not spreadsheet_id:
     raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
-# Apollo.io API for searching coaching leads
-def scrape_leads(search_term="Coaching-Mentorship QA Lead"):
+# Apollo.io API for searching leads with multiple terms and industries
+def scrape_leads(industries=None, search_terms=None):
     api_key = os.getenv("APOLLO_API_KEY")
     url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {
         "Content-Type": "application/json",
         "X-Api-Key": api_key
     }
-    payload = {
-        "q_operators": {
-            "industry": "Coaching",
-            "title": search_term
-        },
-        "per_page": 50
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    print(f"Response status: {response.status_code}")
-    print(f"Response headers: {response.headers}")
-    print(f"Response text: {response.text}")
-    if response.status_code != 200:
-        raise Exception(f"Apollo API error: {response.status_code} - {response.text}")
-    leads = response.json().get("people", [])
-    for lead in leads:
-        sheet.append_row([
-            lead.get("name", "Unknown"),
-            lead.get("email", ""),
-            lead.get("industry", "Coaching"),
-            "New",
-            0,
-            ""
-        ])
-    return leads
+    industries = industries or ["Coaching", "Mentorship"]
+    search_terms = search_terms or ["QA Lead", "Test Lead"]
+    all_leads = []
+    for industry in industries:
+        for term in search_terms:
+            payload = {
+                "q_operators": {
+                    "industry": industry,
+                    "title": term
+                },
+                "per_page": 50
+            }
+            response = requests.post(url, headers=headers, json=payload)
+            print(f"Response status for {industry}/{term}: {response.status_code}")
+            print(f"Response text: {response.text}")
+            if response.status_code != 200:
+                print(f"Apollo API error for {industry}/{term}: {response.status_code} - {response.text}")
+                continue
+            leads = response.json().get("people", [])
+            for lead in leads:
+                sheet.append_row([
+                    lead.get("name", "Unknown"),
+                    lead.get("email", ""),
+                    lead.get("industry", industry),
+                    "New",
+                    0,
+                    ""
+                ])
+            all_leads.extend(leads)
+    return all_leads
 
-# LangChain for generating coaching-specific emails
+# LangChain for generating emails
 def generate_email(name, industry):
     llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=os.getenv("OPENAI_API_KEY"))
     template = """
-    Subject: Free 15-Min Coaching Workflow Audit
+    Subject: Free 15-Min Workflow Audit
 
     Hi {name},
-    As a coach or mentor in the {industry} space, you could save hours weekly with AI automation.
+    As a professional in the {industry} space, you could save hours weekly with AI automation.
     I’d love to offer you a free 15-min audit to optimize your processes.
     Best,
     [Your Name]
@@ -97,7 +103,7 @@ def generate_email(name, industry):
 # Send email via Google Workspace SMTP
 def send_email(to_email, email_content):
     msg = MIMEText(email_content)
-    msg["Subject"] = "Free 15-Min Coaching Workflow Audit"
+    msg["Subject"] = "Free 15-Min Workflow Audit"
     msg["From"] = os.getenv("SMTP_USER", "outreach@solinnovate.io")
     msg["To"] = to_email
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
@@ -107,15 +113,16 @@ def send_email(to_email, email_content):
     print(f"Email sent successfully to {to_email}")
 
 # CrewAI for lead scoring
-def score_leads(leads):
+def score_leads(leads, industries=None):
     scorer = Agent(
         role="Lead Scorer",
-        goal="Score coaching and mentorship leads based on Apollo data",
-        backstory="Expert in evaluating coaching and mentorship professionals",
+        goal="Score leads based on Apollo data and selected industries",
+        backstory="Expert in evaluating professionals across multiple industries",
         llm=ChatOpenAI(model="gpt-4o-mini", openai_api_key=os.getenv("OPENAI_API_KEY"))
     )
+    industries = industries or ["Coaching", "Mentorship"]
     task = Task(
-        description="Score leads based on industry and title: +10 for 'Coach' or 'Mentor' titles, +5 for 'Training' or 'Consultant' roles, +2 for Coaching industry",
+        description=f"Score leads based on industry and title: +10 for titles containing industry-specific keywords ('Coach' or 'Mentor' for {', '.join(industries)}), +5 for 'Training' or 'Consultant' roles, +2 for leads in the selected industries {', '.join(industries)}",
         expected_output="A list of dictionaries containing 'name', 'score', and 'email' for each lead",
         agent=scorer
     )
@@ -123,38 +130,40 @@ def score_leads(leads):
     crew.kickoff()
     scored_leads = []
     for lead in leads:
-        industry = lead.get("industry", "Coaching")
+        industry = lead.get("industry", "").lower()
         title = lead.get("title", "").lower()
-        base_score = 2 if industry == "Coaching" else 0
-        title_score = 10 if "coach" in title or "mentor" in title else 5 if "training" in title or "consultant" in title else 0
+        base_score = 2 if any(ind.lower() in industry for ind in industries) else 0
+        title_score = 10 if any(keyword in title for keyword in [ind.lower().split()[0] for ind in industries]) else 5 if "training" in title or "consultant" in title else 0
         total_score = base_score + title_score
         scored_leads.append({"name": lead.get("name", "Unknown"), "score": total_score, "email": lead.get("email", "")})
     return scored_leads
 
 # Streamlit dashboard
 def run_dashboard():
-    st.title("Coaching & Mentorship Outreach Bot Demo")
-    search_term = st.text_input("Enter Search Term", value="Coaching-Mentorship QA Lead")
+    st.title("Multi-Industry Outreach Bot Demo")
+    industries = st.multiselect("Select Industries", ["Coaching", "Mentorship", "Technology", "Education"], default=["Coaching", "Mentorship"])
+    search_terms = st.text_input("Enter Search Terms (comma-separated)", value="QA Lead,Test Lead").split(",")
+    search_terms = [term.strip() for term in search_terms if term.strip()]
     if "leads" not in st.session_state:
-        st.session_state.leads = scrape_leads(search_term)
+        st.session_state.leads = scrape_leads(industries, search_terms)
     if st.button("Run Search"):
-        st.session_state.leads = scrape_leads(search_term)
+        st.session_state.leads = scrape_leads(industries, search_terms)
         st.rerun()
     leads = st.session_state.leads
     st.write("### Leads Overview")
     for i, lead in enumerate(leads):
         name = lead.get("name", "Unknown")
         email = lead.get("email", "")
-        industry = lead.get("industry", "Coaching")
-        score = next((s["score"] for s in score_leads([lead]) if s["name"] == name), 0)
+        industry = lead.get("industry", "")
+        score = next((s["score"] for s in score_leads([lead], industries) if s["name"] == name), 0)
         status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
         st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
     if st.button("Refresh Leads and Send Emails"):
-        st.session_state.leads = scrape_leads(search_term)
-        scored_leads = score_leads(st.session_state.leads)
+        st.session_state.leads = scrape_leads(industries, search_terms)
+        scored_leads = score_leads(st.session_state.leads, industries)
         for lead in scored_leads:
             if lead["email"]:
-                email_content = generate_email(lead["name"], "Coaching & Mentorship")
+                email_content = generate_email(lead["name"], lead.get("industry", "Coaching & Mentorship"))
                 send_email(lead["email"], email_content)
         st.rerun()
 
