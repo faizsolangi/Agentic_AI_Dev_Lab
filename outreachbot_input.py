@@ -17,7 +17,7 @@ load_dotenv()
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 private_key = os.getenv("GOOGLE_PRIVATE_KEY")
-#print(f"Raw private_key: {private_key}")  # Debug raw input
+print(f"Raw private_key: {private_key}")  # Debug raw input
 if "\\n" in private_key:
     private_key = private_key.replace("\\n", "\n")
     print(f"Adjusted private_key: {private_key}")
@@ -33,7 +33,7 @@ creds_data = {
     "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
     "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", "https://www.googleapis.com/robot/v1/metadata/x509/outreachbottracker%40coaching-leads-tracker.iam.gserviceaccount.com")
 }
-#print(f"Credentials data: {creds_data}")
+print(f"Credentials data: {creds_data}")
 for key, value in creds_data.items():
     if not value:
         raise ValueError(f"Missing or empty environment variable: {key}")
@@ -49,28 +49,30 @@ def scrape_leads(industries=None, search_terms=None):
     api_key = os.getenv("APOLLO_API_KEY")
     url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {
+        "accept": "application/json",
+        "Cache-Control": "no-cache",
         "Content-Type": "application/json",
         "X-Api-Key": api_key
     }
-    industries = industries or ["Coaching", "Mentorship"]
-    search_terms = search_terms or ["QA Lead", "Test Lead"]
+    industries = industries or ["Technology", "Healthcare"]
+    search_terms = search_terms or ["Manager", "Lead"]
     all_leads = []
     for industry in industries:
         for term in search_terms:
             payload = {
                 "q_operators": {
-                    "industry": industry,
-                    "title": term
+                    "industry": {"$contains": industry.lower()},
+                    "title": {"$contains": term.lower()}
                 },
-                "per_page": 50
+                "per_page": 100
             }
             response = requests.post(url, headers=headers, json=payload)
             print(f"Response status for {industry}/{term}: {response.status_code}")
-            print(f"Response text: {response.text}")
+            print(f"Full response: {response.json()}")
             if response.status_code != 200:
                 print(f"Apollo API error for {industry}/{term}: {response.status_code} - {response.text}")
                 continue
-            leads = response.json().get("people", [])
+            leads = response.json().get("contacts", [])
             for lead in leads:
                 sheet.append_row([
                     lead.get("name", "Unknown"),
@@ -120,9 +122,9 @@ def score_leads(leads, industries=None):
         backstory="Expert in evaluating professionals across multiple industries",
         llm=ChatOpenAI(model="gpt-4o-mini", openai_api_key=os.getenv("OPENAI_API_KEY"))
     )
-    industries = industries or ["Coaching", "Mentorship"]
+    industries = industries or ["Technology", "Healthcare"]
     task = Task(
-        description=f"Score leads based on industry and title: +10 for titles containing industry-specific keywords ('Coach' or 'Mentor' for {', '.join(industries)}), +5 for 'Training' or 'Consultant' roles, +2 for leads in the selected industries {', '.join(industries)}",
+        description=f"Score leads based on industry and title: +10 for titles containing industry-specific keywords ('{', '.join([ind.lower().split()[0] for ind in industries])}' for {', '.join(industries)}), +5 for 'Training' or 'Consultant' roles, +2 for leads in the selected industries {', '.join(industries)}",
         expected_output="A list of dictionaries containing 'name', 'score', and 'email' for each lead",
         agent=scorer
     )
@@ -141,8 +143,8 @@ def score_leads(leads, industries=None):
 # Streamlit dashboard
 def run_dashboard():
     st.title("Multi-Industry Outreach Bot Demo")
-    industries = st.multiselect("Select Industries", ["Coaching", "Mentorship", "Technology", "Education"], default=["Coaching", "Mentorship"])
-    search_terms = st.text_input("Enter Search Terms (comma-separated)", value="QA Lead,Test Lead").split(",")
+    industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
+    search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
     search_terms = [term.strip() for term in search_terms if term.strip()]
     if "leads" not in st.session_state:
         st.session_state.leads = scrape_leads(industries, search_terms)
@@ -163,7 +165,7 @@ def run_dashboard():
         scored_leads = score_leads(st.session_state.leads, industries)
         for lead in scored_leads:
             if lead["email"]:
-                email_content = generate_email(lead["name"], lead.get("industry", "Coaching & Mentorship"))
+                email_content = generate_email(lead["name"], lead.get("industry", "Technology & Healthcare"))
                 send_email(lead["email"], email_content)
         st.rerun()
 
