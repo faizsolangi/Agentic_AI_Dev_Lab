@@ -17,10 +17,10 @@ load_dotenv()
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 private_key = os.getenv("GOOGLE_PRIVATE_KEY")
-#print(f"Raw private_key: {private_key}")  # Debug raw input
+print(f"Raw private_key: {private_key}")  # Debug raw input
 if "\\n" in private_key:
     private_key = private_key.replace("\\n", "\n")
-    #print(f"Adjusted private_key: {private_key}")
+    print(f"Adjusted private_key: {private_key}")
 creds_data = {
     "type": os.getenv("GOOGLE_TYPE", "service_account"),
     "project_id": os.getenv("GOOGLE_PROJECT_ID"),
@@ -33,7 +33,7 @@ creds_data = {
     "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
     "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", "https://www.googleapis.com/robot/v1/metadata/x509/outreachbottracker%40coaching-leads-tracker.iam.gserviceaccount.com")
 }
-#print(f"Credentials data: {creds_data}")
+print(f"Credentials data: {creds_data}")
 for key, value in creds_data.items():
     if not value:
         raise ValueError(f"Missing or empty environment variable: {key}")
@@ -57,33 +57,35 @@ def scrape_leads(industries=None, search_terms=None):
     industries = industries or ["Technology", "Healthcare"]
     search_terms = search_terms or ["Manager", "Lead"]
     all_leads = []
-    for industry in industries:
-        for term in search_terms:
-            payload = {
-                "q_operators": {
-                    "industry": {"$contains": industry.lower()},
-                    "title": {"$contains": term.lower()}
-                },
-                "per_page": 100
-            }
-            response = requests.post(url, headers=headers, json=payload)
-            print(f"Response status for {industry}/{term}: {response.status_code}")
-            print(f"Full response: {response.json()}")
-            if response.status_code != 200:
-                print(f"Apollo API error for {industry}/{term}: {response.status_code} - {response.text}")
-                continue
-            leads = response.json().get("contacts", [])
-            for lead in leads:
-                sheet.append_row([
-                    lead.get("name", "Unknown"),
-                    lead.get("email", ""),
-                    lead.get("industry", industry),
-                    "New",
-                    0,
-                    ""
-                ])
-            all_leads.extend(leads)
+    payload = {
+        "q_operators": {
+            "organization_industry": {"$in": industries},
+            "job_title": {"$in": search_terms}
+        },
+        "per_page": 100
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    print(f"Response status: {response.status_code}")
+    print(f"Full response: {response.json()}")
+    if response.status_code != 200:
+        print(f"Apollo API error: {response.status_code} - {response.text}")
+    else:
+        leads = response.json().get("contacts", [])
+        for lead in leads:
+            sheet.append_row([
+                lead.get("name", "Unknown"),
+                lead.get("email", ""),
+                lead.get("organization_industry", "Unknown"),
+                "New",
+                0,
+                ""
+            ])
+        all_leads.extend(leads)
     return all_leads
+
+
+
+
 
 # LangChain for generating emails
 def generate_email(name, industry):
