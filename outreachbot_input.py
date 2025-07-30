@@ -17,10 +17,10 @@ load_dotenv()
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 private_key = os.getenv("GOOGLE_PRIVATE_KEY")
-print(f"Raw private_key: {private_key}")  # Debug raw input
+#print(f"Raw private_key: {private_key}")  # Debug raw input
 if "\\n" in private_key:
     private_key = private_key.replace("\\n", "\n")
-    print(f"Adjusted private_key: {private_key}")
+    #print(f"Adjusted private_key: {private_key}")
 creds_data = {
     "type": os.getenv("GOOGLE_TYPE", "service_account"),
     "project_id": os.getenv("GOOGLE_PROJECT_ID"),
@@ -33,7 +33,7 @@ creds_data = {
     "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
     "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", "https://www.googleapis.com/robot/v1/metadata/x509/outreachbottracker%40coaching-leads-tracker.iam.gserviceaccount.com")
 }
-print(f"Credentials data: {creds_data}")
+#print(f"Credentials data: {creds_data}")
 for key, value in creds_data.items():
     if not value:
         raise ValueError(f"Missing or empty environment variable: {key}")
@@ -44,10 +44,9 @@ if not spreadsheet_id:
     raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
-# Apollo.io API for searching leads with multiple terms and industries
 def scrape_leads(industries=None, search_terms=None):
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/api/v1/contacts/search"
+    url = "https://api.apollo.io/api/v1/mixed_people/search"
     headers = {
         "accept": "application/json",
         "Cache-Control": "no-cache",
