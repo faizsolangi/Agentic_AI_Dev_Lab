@@ -56,7 +56,7 @@ def scrape_leads(industries=None, search_terms=None):
         return []
     st.write(f"API key (partial): {api_key[:5]}...{api_key[-5:]}")
     print(f"API key (partial): {api_key[:5]}...{api_key[-5:]}")
-    url = "https://api.apollo.io/api/v1/organizations/search"  # Test alternative endpoint
+    url = "https://api.apollo.io/api/v1/api/v1/mixed_people/organization_top_people"  # Test alternative endpoint
     headers = {
         "accept": "application/json",
         "Cache-Control": "no-cache",
