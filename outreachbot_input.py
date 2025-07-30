@@ -171,7 +171,7 @@ def run_dashboard():
         try:
             st.session_state.leads = scrape_leads(industries, search_terms)
             st.write("Leads after search:", len(st.session_state.leads))  # Debug post-search
-            except Exception as e:
+        except Exception as e:
             st.write(f"Error during search: {str(e)}")
         st.rerun()
     leads = st.session_state.leads
