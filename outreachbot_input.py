@@ -17,10 +17,8 @@ load_dotenv()
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 private_key = os.getenv("GOOGLE_PRIVATE_KEY")
-#print(f"Raw private_key: {private_key}")  # Debug raw input
 if "\\n" in private_key:
     private_key = private_key.replace("\\n", "\n")
-    #print(f"Adjusted private_key: {private_key}")
 creds_data = {
     "type": os.getenv("GOOGLE_TYPE", "service_account"),
     "project_id": os.getenv("GOOGLE_PROJECT_ID"),
@@ -33,7 +31,6 @@ creds_data = {
     "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_X509_CERT_URL", "https://www.googleapis.com/oauth2/v1/certs"),
     "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_X509_CERT_URL", "https://www.googleapis.com/robot/v1/metadata/x509/outreachbottracker%40coaching-leads-tracker.iam.gserviceaccount.com")
 }
-#print(f"Credentials data: {creds_data}")
 for key, value in creds_data.items():
     if not value:
         raise ValueError(f"Missing or empty environment variable: {key}")
@@ -44,14 +41,13 @@ if not spreadsheet_id:
     raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
-
-
-# Apollo.io API for searching leads with multiple terms and industries
+# Apollo.io API for searching leads
 def scrape_leads(industries=None, search_terms=None):
-    print("Starting scrape_leads function")  # Debug start
+    st.write("Starting scrape_leads function")
     api_key = os.getenv("APOLLO_API_KEY")
     if not api_key:
-        print("Error: APOLLO_API_KEY not found in environment")
+        st.write("Error: APOLLO_API_KEY not found in environment")
+        print("Error: APOLLO_API_KEY not found in environment")  # For Render logs
         return []
     url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {
@@ -63,40 +59,45 @@ def scrape_leads(industries=None, search_terms=None):
     industries = industries or ["Technology", "Healthcare"]
     search_terms = search_terms or ["Manager", "Lead"]
     all_leads = []
+    # Test with a minimal payload first
     payload = {
         "q_operators": {
-            "organization_industry": {"$in": industries},
-            "job_title": {"$in": search_terms}
+            "organization_industry": {"$in": industries}
         },
-        "per_page": 100
+        "per_page": 10  # Reduced for initial test
     }
-    print(f"Sending request with payload: {payload}")  # Debug payload
+    st.write(f"Sending request with payload: {payload}")
+    print(f"Sending request with payload: {payload}")  # For Render logs
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=10)
-        print(f"Response status: {response.status_code}")
-        print(f"Full response: {response.json()}")
+        st.write(f"Response status: {response.status_code}")
+        print(f"Response status: {response.status_code}")  # For Render logs
         if response.status_code != 200:
-            print(f"Apollo API error: {response.status_code} - {response.text}")
-        else:
-            leads = response.json().get("contacts", [])
-            print(f"Number of leads retrieved: {len(leads)}")  # Debug lead count
-            for lead in leads:
-                sheet.append_row([
-                    lead.get("name", "Unknown"),
-                    lead.get("email", ""),
-                    lead.get("organization_industry", "Unknown"),
-                    "New",
-                    0,
-                    ""
-                ])
-            all_leads.extend(leads)
+            st.write(f"Apollo API error: {response.status_code} - {response.text}")
+            print(f"Apollo API error: {response.status_code} - {response.text}")  # For Render logs
+            return []
+        response_data = response.json()
+        st.write(f"Full response: {response_data}")
+        print(f"Full response: {response_data}")  # For Render logs
+        leads = response_data.get("contacts", [])
+        st.write(f"Number of leads retrieved: {len(leads)}")
+        print(f"Number of leads retrieved: {len(leads)}")  # For Render logs
+        for lead in leads:
+            sheet.append_row([
+                lead.get("name", "Unknown"),
+                lead.get("email", ""),
+                lead.get("organization_industry", "Unknown"),
+                "New",
+                0,
+                ""
+            ])
+        all_leads.extend(leads)
     except Exception as e:
-        print(f"Exception occurred: {str(e)}")
-    print("Finished scrape_leads function")
+        st.write(f"Exception in scrape_leads: {str(e)}")
+        print(f"Exception in scrape_leads: {str(e)}")  # For Render logs
+    st.write("Finished scrape_leads function")
+    print("Finished scrape_leads function")  # For Render logs
     return all_leads
-
-
-
 
 # LangChain for generating emails
 def generate_email(name, industry):
@@ -115,9 +116,6 @@ def generate_email(name, industry):
     chain = LLMChain(llm=llm, prompt=prompt)
     return chain.run(name=name, industry=industry)
 
-
-
-
 # Send email via Google Workspace SMTP
 def send_email(to_email, email_content):
     msg = MIMEText(email_content)
@@ -128,9 +126,7 @@ def send_email(to_email, email_content):
         server.starttls()
         server.login(os.getenv("SMTP_USER", "outreach@solinnovate.io"), os.getenv("SMTP_PASSWORD"))
         server.sendmail(os.getenv("SMTP_USER", "outreach@solinnovate.io"), to_email, msg.as_string())
-    print(f"Email sent successfully to {to_email}")
-
-
+    print(f"Email sent successfully to {to_email}")  # For Render logs
 
 # CrewAI for lead scoring
 def score_leads(leads, industries=None):
@@ -158,44 +154,49 @@ def score_leads(leads, industries=None):
         scored_leads.append({"name": lead.get("name", "Unknown"), "score": total_score, "email": lead.get("email", "")})
     return scored_leads
 
-
+# Streamlit dashboard
 def run_dashboard():
     st.title("Multi-Industry Outreach Bot Demo")
     industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
     search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
     search_terms = [term.strip() for term in search_terms if term.strip()]
     if "leads" not in st.session_state:
-        st.session_state.leads = scrape_leads(industries, search_terms)
-        st.write("Initial leads fetched:", len(st.session_state.leads))  # Debug initial fetch
+        try:
+            st.session_state.leads = scrape_leads(industries, search_terms)
+            st.write("Initial leads fetched:", len(st.session_state.leads))
+        except Exception as e:
+            st.write(f"Error during initial fetch: {str(e)}")
     if st.button("Run Search"):
         try:
             st.session_state.leads = scrape_leads(industries, search_terms)
-            st.write("Leads after search:", len(st.session_state.leads))  # Debug post-search
+            st.write("Leads after search:", len(st.session_state.leads))
         except Exception as e:
             st.write(f"Error during search: {str(e)}")
         st.rerun()
     leads = st.session_state.leads
     st.write("### Leads Overview")
     if not leads:
-        st.write("No leads found. Check logs for details.")
+        st.write("No leads found. Check UI messages and Render logs for details.")
     for i, lead in enumerate(leads):
-       name = lead.get("name", "Unknown")
-       email = lead.get("email", "")
-       industry = lead.get("organization_industry", "")
-       score = next((s["score"] for s in score_leads([lead], industries) if s["name"] == name), 0)
-       status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
-       st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
+        name = lead.get("name", "Unknown")
+        email = lead.get("email", "")
+        industry = lead.get("organization_industry", "")
+        score = next((s["score"] for s in score_leads([lead], industries) if s["name"] == name), 0)
+        status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
+        st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
     if st.button("Refresh Leads and Send Emails"):
-        st.session_state.leads = scrape_leads(industries, search_terms)
-        scored_leads = score_leads(st.session_state.leads, industries)
-        for lead in scored_leads:
-            if lead["email"]:
-                email_content = generate_email(lead["name"], lead.get("organization_industry", "Technology & Healthcare"))
-                send_email(lead["email"], email_content)
+        try:
+            st.session_state.leads = scrape_leads(industries, search_terms)
+            scored_leads = score_leads(st.session_state.leads, industries)
+            for lead in scored_leads:
+                if lead["email"]:
+                    email_content = generate_email(lead["name"], lead.get("organization_industry", "Technology & Healthcare"))
+                    send_email(lead["email"], email_content)
+        except Exception as e:
+            st.write(f"Error during refresh: {str(e)}")
         st.rerun()
-         
 
-     # Render web service entry point
+# Render web service entry point
 import sys
 import waitress
 
