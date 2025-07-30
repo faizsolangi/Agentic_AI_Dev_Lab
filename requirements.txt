@@ -1,5 +1,4 @@
 requests
-smtplib
 langchain
 langchain-openai
 streamlit
