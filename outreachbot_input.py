@@ -159,50 +159,48 @@ def score_leads(leads, industries=None):
     return scored_leads
 
 
-
-
-# Streamlit dashboard
 def run_dashboard():
-         st.title("Multi-Industry Outreach Bot Demo")
-         industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
-         search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
-         search_terms = [term.strip() for term in search_terms if term.strip()]
-         if "leads" not in st.session_state:
-             st.session_state.leads = scrape_leads(industries, search_terms)
-             st.write("Initial leads fetched:", len(st.session_state.leads))  # Debug initial fetch
-         if st.button("Run Search"):
-             try:
-                 st.session_state.leads = scrape_leads(industries, search_terms)
-                 st.write("Leads after search:", len(st.session_state.leads))  # Debug post-search
-             except Exception as e:
-                 st.write(f"Error during search: {str(e)}")
-             st.rerun()
-         leads = st.session_state.leads
-         st.write("### Leads Overview")
-         if not leads:
-             st.write("No leads found. Check logs for details.")
-         for i, lead in enumerate(leads):
-             name = lead.get("name", "Unknown")
-             email = lead.get("email", "")
-             industry = lead.get("organization_industry", "")
-             score = next((s["score"] for s in score_leads([lead], industries) if s["name"] == name), 0)
-             status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
-             st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
-         if st.button("Refresh Leads and Send Emails"):
-             st.session_state.leads = scrape_leads(industries, search_terms)
-             scored_leads = score_leads(st.session_state.leads, industries)
-             for lead in scored_leads:
-                 if lead["email"]:
-                     email_content = generate_email(lead["name"], lead.get("organization_industry", "Technology & Healthcare"))
-                     send_email(lead["email"], email_content)
-             st.rerun()
+    st.title("Multi-Industry Outreach Bot Demo")
+    industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
+    search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
+    search_terms = [term.strip() for term in search_terms if term.strip()]
+    if "leads" not in st.session_state:
+        st.session_state.leads = scrape_leads(industries, search_terms)
+        st.write("Initial leads fetched:", len(st.session_state.leads))  # Debug initial fetch
+    if st.button("Run Search"):
+        try:
+            st.session_state.leads = scrape_leads(industries, search_terms)
+            st.write("Leads after search:", len(st.session_state.leads))  # Debug post-search
+            except Exception as e:
+            st.write(f"Error during search: {str(e)}")
+        st.rerun()
+    leads = st.session_state.leads
+    st.write("### Leads Overview")
+    if not leads:
+        st.write("No leads found. Check logs for details.")
+    for i, lead in enumerate(leads):
+       name = lead.get("name", "Unknown")
+       email = lead.get("email", "")
+       industry = lead.get("organization_industry", "")
+       score = next((s["score"] for s in score_leads([lead], industries) if s["name"] == name), 0)
+       status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
+       st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
+    if st.button("Refresh Leads and Send Emails"):
+        st.session_state.leads = scrape_leads(industries, search_terms)
+        scored_leads = score_leads(st.session_state.leads, industries)
+        for lead in scored_leads:
+            if lead["email"]:
+                email_content = generate_email(lead["name"], lead.get("organization_industry", "Technology & Healthcare"))
+                send_email(lead["email"], email_content)
+        st.rerun()
+         
 
      # Render web service entry point
-     import sys
-     import waitress
+import sys
+import waitress
 
 if __name__ == "__main__":
-         if len(sys.argv) > 1 and sys.argv[1] == "render":
-             waitress.serve(run_dashboard, host="0.0.0.0", port=8501)
-         else:
-             run_dashboard()
+    if len(sys.argv) > 1 and sys.argv[1] == "render":
+        waitress.serve(run_dashboard, host="0.0.0.0", port=8501)
+    else:
+        run_dashboard()
