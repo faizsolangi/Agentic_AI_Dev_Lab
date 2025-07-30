@@ -162,7 +162,7 @@ def score_leads(leads, industries=None):
 
 
 # Streamlit dashboard
-     def run_dashboard():
+def run_dashboard():
          st.title("Multi-Industry Outreach Bot Demo")
          industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
          search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
@@ -201,7 +201,7 @@ def score_leads(leads, industries=None):
      import sys
      import waitress
 
-     if __name__ == "__main__":
+if __name__ == "__main__":
          if len(sys.argv) > 1 and sys.argv[1] == "render":
              waitress.serve(run_dashboard, host="0.0.0.0", port=8501)
          else:
