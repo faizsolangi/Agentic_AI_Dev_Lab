@@ -44,8 +44,13 @@ if not spreadsheet_id:
     raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
+# Apollo.io API for searching leads with multiple terms and industries
 def scrape_leads(industries=None, search_terms=None):
+    print("Starting scrape_leads function")  # Debug start
     api_key = os.getenv("APOLLO_API_KEY")
+    if not api_key:
+        print("Error: APOLLO_API_KEY not found in environment")
+        return []
     url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {
         "accept": "application/json",
@@ -63,28 +68,30 @@ def scrape_leads(industries=None, search_terms=None):
         },
         "per_page": 100
     }
-    response = requests.post(url, headers=headers, json=payload)
-    print(f"Response status: {response.status_code}")
-    print(f"Full response: {response.json()}")
-    if response.status_code != 200:
-        print(f"Apollo API error: {response.status_code} - {response.text}")
-    else:
-        leads = response.json().get("contacts", [])
-        for lead in leads:
-            sheet.append_row([
-                lead.get("name", "Unknown"),
-                lead.get("email", ""),
-                lead.get("organization_industry", "Unknown"),
-                "New",
-                0,
-                ""
-            ])
-        all_leads.extend(leads)
+    print(f"Sending request with payload: {payload}")  # Debug payload
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        print(f"Response status: {response.status_code}")
+        print(f"Full response: {response.json()}")
+        if response.status_code != 200:
+            print(f"Apollo API error: {response.status_code} - {response.text}")
+        else:
+            leads = response.json().get("contacts", [])
+            print(f"Number of leads retrieved: {len(leads)}")  # Debug lead count
+            for lead in leads:
+                sheet.append_row([
+                    lead.get("name", "Unknown"),
+                    lead.get("email", ""),
+                    lead.get("organization_industry", "Unknown"),
+                    "New",
+                    0,
+                    ""
+                ])
+            all_leads.extend(leads)
+    except Exception as e:
+        print(f"Exception occurred: {str(e)}")
+    print("Finished scrape_leads function")
     return all_leads
-
-
-
-
 
 # LangChain for generating emails
 def generate_email(name, industry):
@@ -133,8 +140,8 @@ def score_leads(leads, industries=None):
     crew.kickoff()
     scored_leads = []
     for lead in leads:
-        industry = lead.get("industry", "").lower()
-        title = lead.get("title", "").lower()
+        industry = lead.get("organization_industry", "").lower()
+        title = lead.get("job_title", "").lower()
         base_score = 2 if any(ind.lower() in industry for ind in industries) else 0
         title_score = 10 if any(keyword in title for keyword in [ind.lower().split()[0] for ind in industries]) else 5 if "training" in title or "consultant" in title else 0
         total_score = base_score + title_score
@@ -149,15 +156,19 @@ def run_dashboard():
     search_terms = [term.strip() for term in search_terms if term.strip()]
     if "leads" not in st.session_state:
         st.session_state.leads = scrape_leads(industries, search_terms)
+        st.write("Initial leads fetched:", len(st.session_state.leads))  # Debug initial fetch
     if st.button("Run Search"):
         st.session_state.leads = scrape_leads(industries, search_terms)
+        st.write("Leads after search:", len(st.session_state.leads))  # Debug post-search
         st.rerun()
     leads = st.session_state.leads
     st.write("### Leads Overview")
+    if not leads:
+        st.write("No leads found. Check logs for details.")
     for i, lead in enumerate(leads):
         name = lead.get("name", "Unknown")
         email = lead.get("email", "")
-        industry = lead.get("industry", "")
+        industry = lead.get("organization_industry", "")
         score = next((s["score"] for s in score_leads([lead], industries) if s["name"] == name), 0)
         status = sheet.row_values(i + 2)[3] if i + 2 <= len(sheet.get_all_values()) else "New"
         st.write(f"Name: {name}, Email: {email}, Industry: {industry}, Status: {status}, Score: {score}")
@@ -166,7 +177,7 @@ def run_dashboard():
         scored_leads = score_leads(st.session_state.leads, industries)
         for lead in scored_leads:
             if lead["email"]:
-                email_content = generate_email(lead["name"], lead.get("industry", "Technology & Healthcare"))
+                email_content = generate_email(lead["name"], lead.get("organization_industry", "Technology & Healthcare"))
                 send_email(lead["email"], email_content)
         st.rerun()
 
@@ -176,6 +187,6 @@ import waitress
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "render":
-        waitress.serve(run_dashboard, host="0.0.0.0", port=8080)
+        waitress.serve(run_dashboard, host="0.0.0.0", port=8501)  # Explicit port
     else:
         run_dashboard()
