@@ -46,7 +46,7 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 
 def scrape_leads(industries=None, search_terms=None):
     api_key = os.getenv("APOLLO_API_KEY")
-    url = "https://api.apollo.io/api/v1/mixed_people/search"
+    url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {
         "accept": "application/json",
         "Cache-Control": "no-cache",
