@@ -50,20 +50,24 @@ def scrape_leads(industries=None, search_terms=None):
         st.write("Error: APOLLO_API_KEY not found in environment")
         print("Error: APOLLO_API_KEY not found in environment")
         return []
-    url = "https://api.apollo.io/api/v1/contacts/search"
+    st.write(f"API key (partial): {api_key[:5]}...{api_key[-5:]}")
+    print(f"API key (partial): {api_key[:5]}...{api_key[-5:]}")
+    url = "https://api.apollo.io/api/v1/mixed_people/organization_top_people"
     headers = {
         "accept": "application/json",
         "Cache-Control": "no-cache",
         "Content-Type": "application/json",
         "X-Api-Key": api_key
     }
-    industries = industries or ["Software"]  # Single, broad industry
+    industries = industries or ["information_technology_and_services", "health_care"]
+    search_terms = search_terms or ["Manager", "Lead"]
     all_leads = []
     payload = {
-        "q_operators": {
-            "industry": {"$in": industries}
-        },
-        "per_page": 10
+        "industries": industries,
+        "person_titles": search_terms,
+        "include_similar_titles": True,
+        "per_page": 10,
+        "page": 1
     }
     st.write(f"Sending request with payload: {payload}")
     print(f"Sending request with payload: {payload}")
@@ -97,6 +101,7 @@ def scrape_leads(industries=None, search_terms=None):
     st.write("Finished scrape_leads function")
     print("Finished scrape_leads function")
     return all_leads
+
 
 # LangChain for generating emails
 def generate_email(name, industry):
