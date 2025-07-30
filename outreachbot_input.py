@@ -44,10 +44,11 @@ sheet = client.open_by_key(spreadsheet_id).sheet1
 # Apollo.io API for searching leads
 def scrape_leads(industries=None, search_terms=None):
     st.write("Starting scrape_leads function")
+    print("Starting scrape_leads function")  # For Render logs
     api_key = os.getenv("APOLLO_API_KEY")
     if not api_key:
         st.write("Error: APOLLO_API_KEY not found in environment")
-        print("Error: APOLLO_API_KEY not found in environment")  # For Render logs
+        print("Error: APOLLO_API_KEY not found in environment")
         return []
     url = "https://api.apollo.io/api/v1/contacts/search"
     headers = {
@@ -56,37 +57,35 @@ def scrape_leads(industries=None, search_terms=None):
         "Content-Type": "application/json",
         "X-Api-Key": api_key
     }
-    industries = industries or ["Technology", "Healthcare"]
-    search_terms = search_terms or ["Manager", "Lead"]
+    industries = industries or ["Software"]  # Single, broad industry
     all_leads = []
-    # Test with a minimal payload first
     payload = {
         "q_operators": {
-            "organization_industry": {"$in": industries}
+            "industry": {"$in": industries}
         },
-        "per_page": 10  # Reduced for initial test
+        "per_page": 10
     }
     st.write(f"Sending request with payload: {payload}")
-    print(f"Sending request with payload: {payload}")  # For Render logs
+    print(f"Sending request with payload: {payload}")
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=10)
         st.write(f"Response status: {response.status_code}")
-        print(f"Response status: {response.status_code}")  # For Render logs
+        print(f"Response status: {response.status_code}")
         if response.status_code != 200:
             st.write(f"Apollo API error: {response.status_code} - {response.text}")
-            print(f"Apollo API error: {response.status_code} - {response.text}")  # For Render logs
+            print(f"Apollo API error: {response.status_code} - {response.text}")
             return []
         response_data = response.json()
         st.write(f"Full response: {response_data}")
-        print(f"Full response: {response_data}")  # For Render logs
+        print(f"Full response: {response_data}")
         leads = response_data.get("contacts", [])
         st.write(f"Number of leads retrieved: {len(leads)}")
-        print(f"Number of leads retrieved: {len(leads)}")  # For Render logs
+        print(f"Number of leads retrieved: {len(leads)}")
         for lead in leads:
             sheet.append_row([
                 lead.get("name", "Unknown"),
                 lead.get("email", ""),
-                lead.get("organization_industry", "Unknown"),
+                lead.get("industry", "Unknown"),
                 "New",
                 0,
                 ""
@@ -94,9 +93,9 @@ def scrape_leads(industries=None, search_terms=None):
         all_leads.extend(leads)
     except Exception as e:
         st.write(f"Exception in scrape_leads: {str(e)}")
-        print(f"Exception in scrape_leads: {str(e)}")  # For Render logs
+        print(f"Exception in scrape_leads: {str(e)}")
     st.write("Finished scrape_leads function")
-    print("Finished scrape_leads function")  # For Render logs
+    print("Finished scrape_leads function")
     return all_leads
 
 # LangChain for generating emails
