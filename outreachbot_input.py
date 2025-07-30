@@ -42,6 +42,10 @@ if not spreadsheet_id:
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
 # Apollo.io API for searching leads
+
+
+
+
 def scrape_leads(industries=None, search_terms=None):
     st.write("Starting scrape_leads function")
     print("Starting scrape_leads function")  # For Render logs
@@ -52,20 +56,14 @@ def scrape_leads(industries=None, search_terms=None):
         return []
     st.write(f"API key (partial): {api_key[:5]}...{api_key[-5:]}")
     print(f"API key (partial): {api_key[:5]}...{api_key[-5:]}")
-    url = "https://api.apollo.io/api/v1/contacts/research"
+    url = "https://api.apollo.io/api/v1/organizations/search"  # Test alternative endpoint
     headers = {
         "accept": "application/json",
         "Cache-Control": "no-cache",
         "Content-Type": "application/json",
         "X-Api-Key": api_key
     }
-    industries = industries or ["information_technology_and_services", "health_care"]
-    search_terms = search_terms or ["Manager", "Lead"]
-    all_leads = []
     payload = {
-        "industries": industries,
-        "person_titles": search_terms,
-        "include_similar_titles": True,
         "per_page": 10,
         "page": 1
     }
@@ -82,25 +80,36 @@ def scrape_leads(industries=None, search_terms=None):
         response_data = response.json()
         st.write(f"Full response: {response_data}")
         print(f"Full response: {response_data}")
-        leads = response_data.get("contacts", [])
-        st.write(f"Number of leads retrieved: {len(leads)}")
-        print(f"Number of leads retrieved: {len(leads)}")
+        leads = response_data.get("organizations", [])  # Adjusted for organizations
+        st.write(f"Number of organizations retrieved: {len(leads)}")
+        print(f"Number of organizations retrieved: {len(leads)}")
         for lead in leads:
             sheet.append_row([
                 lead.get("name", "Unknown"),
-                lead.get("email", ""),
+                "",
                 lead.get("industry", "Unknown"),
                 "New",
                 0,
                 ""
             ])
-        all_leads.extend(leads)
+        return leads
     except Exception as e:
         st.write(f"Exception in scrape_leads: {str(e)}")
         print(f"Exception in scrape_leads: {str(e)}")
     st.write("Finished scrape_leads function")
     print("Finished scrape_leads function")
-    return all_leads
+    return []
+
+
+
+
+
+
+
+
+
+
+
 
 
 # LangChain for generating emails
