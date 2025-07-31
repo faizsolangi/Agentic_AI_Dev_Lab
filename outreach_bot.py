@@ -54,23 +54,32 @@ def parse_csv(file):
     leads = []
     try:
         csv_file = file.read().decode('utf-8')
-        reader = csv.DictReader(csv_file.splitlines())
-        for row in reader:
+        # Check if file has headers; if not, assume default headers
+        lines = csv_file.splitlines()
+        if not lines or not any(lines[0].strip()):
+            logging.warning("No data in CSV")
+            return leads
+        reader = csv.DictReader(lines, fieldnames=["name", "email", "industry", "status", "score"])
+        for i, row in enumerate(reader):
+            if i == 0 and all(k in row for k in ["name", "email", "industry", "status", "score"]):
+                continue  # Skip header row if present
             lead = {
                 "name": row.get("name", "Unknown"),
                 "email": row.get("email", ""),
-                "organization_industry": row.get("industry", "Unknown")
+                "organization_industry": row.get("industry", "Unknown"),
+                "status": row.get("status", "New"),
+                "score": int(row.get("score", 0)) if row.get("score", "").isdigit() else 0
             }
             leads.append(lead)
             sheet.append_row([
                 lead.get("name", "Unknown"),
                 lead.get("email", ""),
                 lead.get("organization_industry", "Unknown"),
-                "New",
-                0,
+                lead.get("status", "New"),
+                lead.get("score", 0),
                 ""
             ])
-        logging.debug(f"Parsed and saved {len(leads)} leads from CSV")
+            logging.debug(f"Parsed lead: {lead}")
     except Exception as e:
         logging.error(f"Error parsing CSV: {str(e)}")
         st.write(f"Error parsing CSV: {str(e)}")
@@ -85,15 +94,17 @@ def process_emails(email_input):
         lead = {
             "name": "Unknown",
             "email": email,
-            "organization_industry": "Unknown"
+            "organization_industry": "Unknown",
+            "status": "New",
+            "score": 0
         }
         leads.append(lead)
         sheet.append_row([
             lead.get("name", "Unknown"),
             lead.get("email", ""),
             lead.get("organization_industry", "Unknown"),
-            "New",
-            0,
+            lead.get("status", "New"),
+            lead.get("score", 0),
             ""
         ])
     logging.debug(f"Processed and saved {len(leads)} emails")
@@ -159,8 +170,8 @@ def run_dashboard():
     st.title("Multi-Industry Outreach Bot Demo")
     # Input options
     industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
-    uploaded_file = st.file_uploader("Upload CSV file (name, email, industry columns)", type="csv")
-    email_input = st.text_input("Enter emails (comma-separated)", value="faizsolangi@gmail.com")
+    uploaded_file = st.file_uploader("Upload CSV file (name, email, industry, status, score columns)", type="csv")
+    email_input = st.text_input("Enter emails (comma-separated)", value="example1@email.com,example2@email.com")
     search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
     search_terms = [term.strip() for term in search_terms if term.strip()]
 
@@ -221,7 +232,12 @@ import sys
 import waitress
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "render":
-        waitress.serve(run_dashboard, host="0.0.0.0", port=8501)
-    else:
-        run_dashboard()
+    try:
+        if len(sys.argv) > 1 and sys.argv[1] == "render":
+            waitress.serve(run_dashboard, host="0.0.0.0", port=8501)
+        else:
+            run_dashboard()
+    except Exception as e:
+        print(f"Error starting bot: {str(e)}")
+        with open("outreach_bot.log", "a") as f:
+            f.write(f"Error starting bot: {str(e)}\n")
