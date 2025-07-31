@@ -160,7 +160,7 @@ def run_dashboard():
     # Input options
     industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
     uploaded_file = st.file_uploader("Upload CSV file (name, email, industry columns)", type="csv")
-    email_input = st.text_input("Enter emails (comma-separated)", value="example1@email.com,example2@email.com")
+    email_input = st.text_input("Enter emails (comma-separated)", value="faizsolangi@gmail.com")
     search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
     search_terms = [term.strip() for term in search_terms if term.strip()]
 
