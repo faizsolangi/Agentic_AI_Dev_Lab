@@ -48,7 +48,7 @@ if not spreadsheet_id:
     raise ValueError("GOOGLE_SPREADSHEET_ID environment variable not set")
 sheet = client.open_by_key(spreadsheet_id).sheet1
 
-# Function to parse CSV file
+# Function to parse CSV file and save to Google Sheets
 def parse_csv(file):
     logging.debug("Parsing CSV file")
     leads = []
@@ -56,29 +56,47 @@ def parse_csv(file):
         csv_file = file.read().decode('utf-8')
         reader = csv.DictReader(csv_file.splitlines())
         for row in reader:
-            leads.append({
+            lead = {
                 "name": row.get("name", "Unknown"),
                 "email": row.get("email", ""),
                 "organization_industry": row.get("industry", "Unknown")
-            })
-        logging.debug(f"Parsed {len(leads)} leads from CSV")
+            }
+            leads.append(lead)
+            sheet.append_row([
+                lead.get("name", "Unknown"),
+                lead.get("email", ""),
+                lead.get("organization_industry", "Unknown"),
+                "New",
+                0,
+                ""
+            ])
+        logging.debug(f"Parsed and saved {len(leads)} leads from CSV")
     except Exception as e:
         logging.error(f"Error parsing CSV: {str(e)}")
         st.write(f"Error parsing CSV: {str(e)}")
     return leads
 
-# Function to process manual email input
+# Function to process manual email input and save to Google Sheets
 def process_emails(email_input):
     logging.debug("Processing manual email input")
     leads = []
     emails = [email.strip() for email in email_input.split(",") if email.strip()]
     for email in emails:
-        leads.append({
+        lead = {
             "name": "Unknown",
             "email": email,
             "organization_industry": "Unknown"
-        })
-    logging.debug(f"Processed {len(leads)} emails")
+        }
+        leads.append(lead)
+        sheet.append_row([
+            lead.get("name", "Unknown"),
+            lead.get("email", ""),
+            lead.get("organization_industry", "Unknown"),
+            "New",
+            0,
+            ""
+        ])
+    logging.debug(f"Processed and saved {len(leads)} emails")
     return leads
 
 # LangChain for generating emails
@@ -142,7 +160,7 @@ def run_dashboard():
     # Input options
     industries = st.multiselect("Select Industries", ["Technology", "Healthcare", "Coaching", "Education"], default=["Technology", "Healthcare"])
     uploaded_file = st.file_uploader("Upload CSV file (name, email, industry columns)", type="csv")
-    email_input = st.text_input("Enter emails (comma-separated)", value="faizsolangi@gmail.com")
+    email_input = st.text_input("Enter emails (comma-separated)", value="example1@email.com,example2@email.com")
     search_terms = st.text_input("Enter Search Terms (comma-separated)", value="Manager,Lead").split(",")
     search_terms = [term.strip() for term in search_terms if term.strip()]
 
